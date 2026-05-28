@@ -1,0 +1,14 @@
+{
+  "weapons": [
+    {
+      "id": "yamato",
+      "name": "Yamato",
+      "role": "Fast combo weapon for ground and air chains"
+    },
+    {
+      "id": "beowulf",
+      "name": "Beowulf",
+      "role": "Heavy weapon for high damage and launch resistance breaking"
+    }
+  ]
+}

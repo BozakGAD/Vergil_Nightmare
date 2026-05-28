@@ -1,0 +1,9 @@
+{
+  "enemy_costs": {
+    "slow_enemy": 1,
+    "fast_enemy": 2,
+    "heavy_enemy": 4
+  },
+  "base_budget": 3,
+  "budget_growth": 2
+}
