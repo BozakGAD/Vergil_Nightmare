@@ -3,7 +3,13 @@
     "width": 1280,
     "height": 720,
     "fps": 60,
-    "title": "Vergil's Nightmare"
+    "title": "Vergil's Nightmare",
+    "icon_path": "assets/icons/app_icon.png",
+    "taskbar_app_id": "vergils_nightmare.vibecoding"
+  },
+  "assets": {
+    "main_menu_background": "assets/backgrounds/main_menu_background/main_menu_background.png",
+    "title_placeholder_image": "assets/ui/title_placeholder.png"
   },
   "gameplay": {
     "max_waves": 5,
