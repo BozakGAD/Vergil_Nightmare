@@ -20,12 +20,13 @@ from src.ui.button import Button
 class MainMenuScene:
     """First window shown to the player after launching the game."""
 
+    BORDER_GAP = 150
+    BUTTON_WIDTH = 350
     BACKGROUND_COLOR = (13, 15, 27)
-    PANEL_COLOR = (28, 30, 44)
-    ACCENT_COLOR = (138, 34, 47)
+    PANEL_COLOR = (33, 42, 64, 200)
+    BORDER_COLOR = (255, 255, 255, 255)
     TEXT_COLOR = (240, 240, 245)
     MUTED_TEXT_COLOR = (172, 174, 190)
-    PLACEHOLDER_BORDER_COLOR = (102, 54, 72)
 
     def __init__(
         self,
@@ -42,7 +43,7 @@ class MainMenuScene:
         self.quit_game = quit_game
         font_path = pygame.font.match_font("dejavusans")
         self.subtitle_font = pygame.font.Font(font_path, 24)
-        self.button_font = pygame.font.Font(font_path, 26)
+        self.button_font = pygame.font.Font(font_path, 28)
         self.small_font = pygame.font.Font(font_path, 20)
         self.settings_open = False
         self.waiting_for_action: str | None = None
@@ -66,11 +67,11 @@ class MainMenuScene:
         return pygame.transform.smoothscale(image, size)
 
     def _create_menu_buttons(self) -> list[Button]:
-        button_width = 330
+        button_width = 290
         button_height = 62
-        start_y = 315
+        start_y = (self.screen_height-button_height) // 1.7
         gap = 24
-        left = (self.screen_width - button_width) // 2
+        left = (self.screen_width - button_width) // 7
         labels_and_actions: tuple[tuple[str, Callable[[], None]], ...] = (
             ("Начать игру", self.start_game),
             ("Настройки", self._open_settings),
@@ -87,12 +88,11 @@ class MainMenuScene:
 
     def _rebuild_settings_buttons(self) -> None:
         panel_rect = self._settings_panel_rect()
-        column_width = 450
         row_height = 48
         row_gap = 14
         top = panel_rect.top + 130
-        left_x = panel_rect.left + 65
-        right_x = panel_rect.right - column_width - 65
+        left_x = panel_rect.left + self.BORDER_GAP
+        right_x = panel_rect.right - self.BORDER_GAP - self.BUTTON_WIDTH
         buttons: list[Button] = []
 
         for column_x, actions in ((left_x, LEFT_SETTINGS_COLUMN), (right_x, RIGHT_SETTINGS_COLUMN)):
@@ -100,7 +100,7 @@ class MainMenuScene:
                 button_rect = pygame.Rect(
                     column_x,
                     top + index * (row_height + row_gap),
-                    column_width,
+                    self.BUTTON_WIDTH,
                     row_height,
                 )
                 buttons.append(
@@ -195,7 +195,7 @@ class MainMenuScene:
 
         placeholder = pygame.Surface(placeholder_rect.size, pygame.SRCALPHA)
         pygame.draw.rect(placeholder, (0, 0, 0, 70), placeholder.get_rect(), border_radius=12)
-        pygame.draw.rect(placeholder, self.PLACEHOLDER_BORDER_COLOR, placeholder.get_rect(), width=2, border_radius=12)
+        pygame.draw.rect(placeholder, self.BORDER_COLOR, placeholder.get_rect(), width=2, border_radius=12)
         label = self.small_font.render("Заглушка под пиксельное изображение названия", True, self.MUTED_TEXT_COLOR)
         placeholder.blit(label, label.get_rect(center=placeholder.get_rect().center))
         surface.blit(placeholder, placeholder_rect)
@@ -206,8 +206,15 @@ class MainMenuScene:
         surface.blit(dim_layer, (0, 0))
 
         panel_rect = self._settings_panel_rect()
-        pygame.draw.rect(surface, self.PANEL_COLOR, panel_rect, border_radius=18)
-        pygame.draw.rect(surface, self.ACCENT_COLOR, panel_rect, width=3, border_radius=18)
+
+        panel_surface = pygame.Surface(panel_rect.size, pygame.SRCALPHA)
+
+        local_rect = pygame.Rect(0, 0, panel_rect.width, panel_rect.height)
+
+        pygame.draw.rect(panel_surface, self.PANEL_COLOR, local_rect, border_radius=12)
+        pygame.draw.rect(panel_surface, self.BORDER_COLOR, local_rect, width=2, border_radius=12)
+
+        surface.blit(panel_surface, panel_rect.topleft)
 
         title = self.subtitle_font.render("Настройки управления", True, self.TEXT_COLOR)
         surface.blit(title, title.get_rect(center=(panel_rect.centerx, panel_rect.top + 42)))
@@ -218,8 +225,8 @@ class MainMenuScene:
 
         left_label = self.small_font.render("Передвижение", True, self.MUTED_TEXT_COLOR)
         right_label = self.small_font.render("Боевые действия и система", True, self.MUTED_TEXT_COLOR)
-        surface.blit(left_label, (panel_rect.left + 70, panel_rect.top + 106))
-        surface.blit(right_label, (panel_rect.centerx + 35, panel_rect.top + 106))
+        surface.blit(left_label, (panel_rect.left + self.BORDER_GAP + 100, panel_rect.top + 106))
+        surface.blit(right_label, (panel_rect.right - self.BORDER_GAP - self.BUTTON_WIDTH + 30, panel_rect.top + 106))
 
         for button in self.settings_buttons:
             if button.action_id is not None:
