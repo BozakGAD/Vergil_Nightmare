@@ -29,9 +29,9 @@ DEFAULT_CONTROL_BINDINGS = MappingProxyType(
 
 CONTROL_LABELS = MappingProxyType(
     {
-        "move_up": "Движение вверх",
+        "move_up": "Модификатор атаки вверх",
         "move_left": "Движение влево",
-        "move_down": "Движение вниз",
+        "move_down": "Модификатор атаки назад",
         "move_right": "Движение вправо",
         "jump": "Прыжок",
         "attack": "Атака",

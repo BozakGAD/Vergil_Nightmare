@@ -1,0 +1,33 @@
+{
+  "movement": {
+    "horizontal_speed": 300,
+    "attack_horizontal_speed_modifier": 0.35,
+    "jump_velocity": -620,
+    "ground_gravity": 1650,
+    "air_gravity": 1200
+  },
+  "size": {
+    "width": 46,
+    "height": 92
+  },
+  "sprites": {
+    "root": "assets/sprites/player",
+    "animations": {
+      "idle": "idle",
+      "taunt": "taunt",
+      "run": "run",
+      "jump_rise": "jump_rise",
+      "jump_hang": "jump_hang",
+      "fall": "fall",
+      "hurt": "hurt",
+      "death": "death",
+      "yamato_air_lift": "yamato_air_lift",
+      "yamato_air_slam": "yamato_air_slam",
+      "yamato_ground_slash": "yamato_ground_slash",
+      "yamato_ground_launcher_full": "yamato_ground_launcher_full",
+      "yamato_ground_launcher_rise": "yamato_ground_launcher_rise"
+    },
+    "frame_duration": 0.08,
+    "scale": 2
+  }
+}

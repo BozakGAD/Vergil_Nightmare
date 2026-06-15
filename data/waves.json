@@ -1,9 +1,13 @@
 {
+  "max_waves": 5,
   "enemy_costs": {
     "slow_enemy": 1,
     "fast_enemy": 2,
     "heavy_enemy": 4
   },
   "base_budget": 3,
-  "budget_growth": 2
+  "budget_growth": 2,
+  "spawn_margin": 110,
+  "spawn_gap": 82,
+  "spawn_order": ["heavy_enemy", "fast_enemy", "slow_enemy"]
 }

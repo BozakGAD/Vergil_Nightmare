@@ -7,25 +7,17 @@ from pathlib import Path
 
 import pygame
 
-from src.core.control_constants import (
-    CONTROL_LABELS,
-    LEFT_SETTINGS_COLUMN,
-    RIGHT_SETTINGS_COLUMN,
-)
 from src.core.settings import AssetSettings
 from src.systems.control_settings import ControlSettings
 from src.ui.button import Button
+from src.ui.control_settings_panel import ControlSettingsPanel
 
 
 class MainMenuScene:
     """First window shown to the player after launching the game."""
 
-    BORDER_GAP = 150
-    BUTTON_WIDTH = 350
     BACKGROUND_COLOR = (13, 15, 27)
-    PANEL_COLOR = (33, 42, 64, 200)
     BORDER_COLOR = (255, 255, 255, 255)
-    TEXT_COLOR = (240, 240, 245)
     MUTED_TEXT_COLOR = (172, 174, 190)
 
     def __init__(
@@ -42,19 +34,15 @@ class MainMenuScene:
         self.start_game = start_game
         self.quit_game = quit_game
         font_path = pygame.font.match_font("dejavusans")
-        self.subtitle_font = pygame.font.Font(font_path, 24)
         self.button_font = pygame.font.Font(font_path, 28)
         self.small_font = pygame.font.Font(font_path, 20)
-        self.settings_open = False
-        self.waiting_for_action: str | None = None
         self.background_image = self._load_scaled_image(
             self.assets.main_menu_background,
             (self.screen_width, self.screen_height),
         )
         self.title_placeholder_image = self._load_scaled_image(self.assets.title_placeholder_image, (560, 145))
+        self.settings_panel = ControlSettingsPanel(screen_size=screen_size, controls=self.controls)
         self.menu_buttons = self._create_menu_buttons()
-        self.settings_buttons: list[Button] = []
-        self._rebuild_settings_buttons()
 
     def _load_scaled_image(self, image_path: str | None, size: tuple[int, int]) -> pygame.Surface | None:
         """Load and scale an optional image asset if the configured file exists."""
@@ -74,7 +62,7 @@ class MainMenuScene:
         left = (self.screen_width - button_width) // 7
         labels_and_actions: tuple[tuple[str, Callable[[], None]], ...] = (
             ("Начать игру", self.start_game),
-            ("Настройки", self._open_settings),
+            ("Настройки", self.settings_panel.open),
             ("Выход", self.quit_game),
         )
         return [
@@ -86,79 +74,9 @@ class MainMenuScene:
             for index, (label, action) in enumerate(labels_and_actions)
         ]
 
-    def _rebuild_settings_buttons(self) -> None:
-        panel_rect = self._settings_panel_rect()
-        row_height = 48
-        row_gap = 14
-        top = panel_rect.top + 130
-        left_x = panel_rect.left + self.BORDER_GAP
-        right_x = panel_rect.right - self.BORDER_GAP - self.BUTTON_WIDTH
-        buttons: list[Button] = []
-
-        for column_x, actions in ((left_x, LEFT_SETTINGS_COLUMN), (right_x, RIGHT_SETTINGS_COLUMN)):
-            for index, action in enumerate(actions):
-                button_rect = pygame.Rect(
-                    column_x,
-                    top + index * (row_height + row_gap),
-                    self.BUTTON_WIDTH,
-                    row_height,
-                )
-                buttons.append(
-                    Button(
-                        rect=button_rect,
-                        text=self._settings_button_text(action),
-                        on_click=lambda selected_action=action: self._start_rebinding(selected_action),
-                        enabled=action != "pause",
-                        action_id=action,
-                    )
-                )
-
-        close_rect = pygame.Rect(panel_rect.centerx - 120, panel_rect.bottom - 74, 240, 50)
-        buttons.append(Button(rect=close_rect, text="Закрыть", on_click=self._close_settings))
-        self.settings_buttons = buttons
-
-    def _settings_button_text(self, action: str) -> str:
-        key_text = self.controls.get(action).upper()
-        if action == "pause":
-            return f"{CONTROL_LABELS[action]}: {key_text}"
-        if self.waiting_for_action == action:
-            return f"{CONTROL_LABELS[action]}: нажмите клавишу..."
-        return f"{CONTROL_LABELS[action]}: {key_text}"
-
-    def _settings_panel_rect(self) -> pygame.Rect:
-        return pygame.Rect(70, 72, self.screen_width - 140, self.screen_height - 124)
-
-    def _open_settings(self) -> None:
-        self.settings_open = True
-        self.waiting_for_action = None
-        self._rebuild_settings_buttons()
-
-    def _close_settings(self) -> None:
-        self.settings_open = False
-        self.waiting_for_action = None
-
-    def _start_rebinding(self, action: str) -> None:
-        if action == "pause":
-            return
-        self.waiting_for_action = action
-        self._rebuild_settings_buttons()
-
     def handle_event(self, event: pygame.event.Event) -> None:
         """Handle menu and settings input."""
-        if event.type == pygame.KEYDOWN:
-            if self.waiting_for_action is not None:
-                self.controls.set_key(self.waiting_for_action, pygame.key.name(event.key))
-                self.controls.save()
-                self.waiting_for_action = None
-                self._rebuild_settings_buttons()
-                return
-            if event.key == pygame.K_ESCAPE and self.settings_open:
-                self._close_settings()
-                return
-
-        if self.settings_open:
-            for button in self.settings_buttons:
-                button.handle_event(event)
+        if self.settings_panel.handle_event(event):
             return
 
         for button in self.menu_buttons:
@@ -177,8 +95,7 @@ class MainMenuScene:
         for button in self.menu_buttons:
             button.draw(surface, self.button_font, mouse_position=mouse_position)
 
-        if self.settings_open:
-            self._draw_settings_overlay(surface, mouse_position)
+        self.settings_panel.draw(surface, mouse_position)
 
     def _draw_background(self, surface: pygame.Surface) -> None:
         """Draw a configured menu background or leave a plain fallback color."""
@@ -200,35 +117,3 @@ class MainMenuScene:
         placeholder.blit(label, label.get_rect(center=placeholder.get_rect().center))
         surface.blit(placeholder, placeholder_rect)
 
-    def _draw_settings_overlay(self, surface: pygame.Surface, mouse_position: tuple[int, int]) -> None:
-        dim_layer = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
-        dim_layer.fill((0, 0, 0, 165))
-        surface.blit(dim_layer, (0, 0))
-
-        panel_rect = self._settings_panel_rect()
-
-        panel_surface = pygame.Surface(panel_rect.size, pygame.SRCALPHA)
-
-        local_rect = pygame.Rect(0, 0, panel_rect.width, panel_rect.height)
-
-        pygame.draw.rect(panel_surface, self.PANEL_COLOR, local_rect, border_radius=12)
-        pygame.draw.rect(panel_surface, self.BORDER_COLOR, local_rect, width=2, border_radius=12)
-
-        surface.blit(panel_surface, panel_rect.topleft)
-
-        title = self.subtitle_font.render("Настройки управления", True, self.TEXT_COLOR)
-        surface.blit(title, title.get_rect(center=(panel_rect.centerx, panel_rect.top + 42)))
-
-        hint_text = "Нажмите кнопку действия, затем новую клавишу."
-        hint = self.small_font.render(hint_text, True, self.MUTED_TEXT_COLOR)
-        surface.blit(hint, hint.get_rect(center=(panel_rect.centerx, panel_rect.top + 78)))
-
-        left_label = self.small_font.render("Передвижение", True, self.MUTED_TEXT_COLOR)
-        right_label = self.small_font.render("Боевые действия и система", True, self.MUTED_TEXT_COLOR)
-        surface.blit(left_label, (panel_rect.left + self.BORDER_GAP + 100, panel_rect.top + 106))
-        surface.blit(right_label, (panel_rect.right - self.BORDER_GAP - self.BUTTON_WIDTH + 30, panel_rect.top + 106))
-
-        for button in self.settings_buttons:
-            if button.action_id is not None:
-                button.text = self._settings_button_text(button.action_id)
-            button.draw(surface, self.small_font, mouse_position=mouse_position)
