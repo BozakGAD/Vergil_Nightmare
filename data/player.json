@@ -1,7 +1,7 @@
 {
   "movement": {
     "horizontal_speed": 300,
-    "attack_horizontal_speed_modifier": 0.35,
+    "attack_horizontal_speed_modifier": 0.25,
     "jump_velocity": -620,
     "ground_gravity": 1650,
     "air_gravity": 1200
@@ -27,7 +27,7 @@
       "yamato_ground_launcher_full": "yamato_ground_launcher_full",
       "yamato_ground_launcher_rise": "yamato_ground_launcher_rise"
     },
-    "frame_duration": 0.08,
+    "frame_duration": 0.15,
     "scale": 2
   }
 }

@@ -4,9 +4,9 @@
       "id": "yamato_ground_slash",
       "animation": "yamato_ground_slash",
       "duration": 0.42,
-      "hit_start": 0.12,
+      "hit_start": 0,
       "hit_end": 0.24,
-      "damage": 18,
+      "damage": 25,
       "range_px": 78,
       "hitbox_height": 68,
       "player_vertical_boost": 0,
@@ -15,7 +15,7 @@
       "enemy_slam_velocity": 0,
       "enemy_air_gravity_modifier": 1.0,
       "launch_player": false,
-      "enemy_knockback_x": 190
+      "enemy_knockback_x": 300
     },
     {
       "id": "yamato_ground_launcher_full",
@@ -23,7 +23,7 @@
       "duration": 0.55,
       "hit_start": 0.14,
       "hit_end": 0.28,
-      "damage": 14,
+      "damage": 15,
       "range_px": 68,
       "hitbox_height": 72,
       "player_vertical_boost": 0,
@@ -32,7 +32,7 @@
       "enemy_slam_velocity": 0,
       "enemy_air_gravity_modifier": 0.82,
       "launch_player": false,
-      "enemy_knockback_x": 80
+      "enemy_knockback_x": 150
     },
     {
       "id": "yamato_ground_launcher_rise",
@@ -40,50 +40,50 @@
       "duration": 0.4,
       "hit_start": 0.12,
       "hit_end": 0.24,
-      "damage": 14,
+      "damage": 10,
       "range_px": 68,
       "hitbox_height": 72,
-      "player_vertical_boost": -430,
+      "player_vertical_boost": -700,
       "player_gravity_modifier": 1.0,
-      "enemy_lift_velocity": -540,
+      "enemy_lift_velocity": -730,
       "enemy_slam_velocity": 0,
       "enemy_air_gravity_modifier": 0.8,
       "launch_player": true,
-      "enemy_knockback_x": 70
+      "enemy_knockback_x": 150
     },
     {
       "id": "yamato_air_lift",
       "animation": "yamato_air_lift",
-      "duration": 0.36,
+      "duration": 0.6,
       "hit_start": 0.08,
       "hit_end": 0.2,
-      "damage": 12,
+      "damage": 20,
       "range_px": 72,
-      "hitbox_height": 70,
-      "player_vertical_boost": -80,
-      "player_gravity_modifier": 0.28,
-      "enemy_lift_velocity": -260,
+      "hitbox_height": 100,
+      "player_vertical_boost": -60,
+      "player_gravity_modifier": 0.6,
+      "enemy_lift_velocity": -200,
       "enemy_slam_velocity": 0,
       "enemy_air_gravity_modifier": 0.55,
       "launch_player": false,
-      "enemy_knockback_x": 45
+      "enemy_knockback_x": 100
     },
     {
       "id": "yamato_air_slam",
       "animation": "yamato_air_slam",
-      "duration": 0.36,
+      "duration": 0.5,
       "hit_start": 0.08,
       "hit_end": 0.2,
-      "damage": 12,
+      "damage": 35,
       "range_px": 72,
-      "hitbox_height": 70,
-      "player_vertical_boost": -70,
-      "player_gravity_modifier": 0.34,
+      "hitbox_height": 100,
+      "player_vertical_boost": -60,
+      "player_gravity_modifier": 0.6,
       "enemy_lift_velocity": 0,
-      "enemy_slam_velocity": 620,
+      "enemy_slam_velocity": 900,
       "enemy_air_gravity_modifier": 0.65,
       "launch_player": false,
-      "enemy_knockback_x": 120
+      "enemy_knockback_x": 500
     }
   ]
 }

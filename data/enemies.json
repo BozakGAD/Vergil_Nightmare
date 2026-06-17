@@ -1,7 +1,7 @@
 {
   "defaults": {
-    "preferred_air_distance": 150,
-    "stop_distance": 58,
+    "preferred_air_distance": 400,
+    "stop_distance": 70,
     "gravity": 1550,
     "air_gravity_modifier": 1.0,
     "launch_hits_required": 0
@@ -10,26 +10,26 @@
     "slow_enemy": {
       "width": 44,
       "height": 70,
-      "speed": 80,
-      "max_health": 42,
+      "speed": 110,
+      "max_health": 100,
       "color": [210, 90, 85],
       "launch_hits_required": 0
     },
     "fast_enemy": {
       "width": 38,
       "height": 62,
-      "speed": 145,
-      "max_health": 30,
+      "speed": 200,
+      "max_health": 70,
       "color": [235, 150, 75],
       "launch_hits_required": 0
     },
     "heavy_enemy": {
       "width": 58,
       "height": 86,
-      "speed": 60,
-      "max_health": 90,
+      "speed": 100,
+      "max_health": 150,
       "color": [150, 100, 220],
-      "launch_hits_required": 5
+      "launch_hits_required": 4
     }
   }
 }
