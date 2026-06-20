@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import random
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -18,6 +19,8 @@ class WaveSettings:
     spawn_margin: int
     spawn_gap: int
     spawn_order: tuple[str, ...]
+    inter_wave_delay: float
+    spawn_offscreen_distance: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,6 +29,7 @@ class EnemySpawn:
 
     enemy_id: str
     x: float
+    side: str
 
 
 class WaveManager:
@@ -65,11 +69,13 @@ class WaveManager:
         return enemies
 
     def _place_spawns(self, enemy_ids: list[str], arena_width: int) -> list[EnemySpawn]:
-        right_edge = max(self.settings.spawn_margin, arena_width - self.settings.spawn_margin)
-        return [
-            EnemySpawn(enemy_id=enemy_id, x=max(self.settings.spawn_margin, right_edge - index * self.settings.spawn_gap))
-            for index, enemy_id in enumerate(enemy_ids)
-        ]
+        spawns: list[EnemySpawn] = []
+        for index, enemy_id in enumerate(enemy_ids):
+            side = random.choice(("left", "right"))
+            distance = self.settings.spawn_offscreen_distance + index * self.settings.spawn_gap
+            x = -distance if side == "left" else arena_width + distance
+            spawns.append(EnemySpawn(enemy_id=enemy_id, x=x, side=side))
+        return spawns
 
 
 def load_wave_settings(path: str | Path = "data/waves.json") -> WaveSettings:
@@ -83,4 +89,6 @@ def load_wave_settings(path: str | Path = "data/waves.json") -> WaveSettings:
         spawn_margin=int(raw_data.get("spawn_margin", 110)),
         spawn_gap=int(raw_data.get("spawn_gap", 82)),
         spawn_order=tuple(str(enemy_id) for enemy_id in raw_data.get("spawn_order", raw_data["enemy_costs"].keys())),
+        inter_wave_delay=float(raw_data.get("inter_wave_delay", 0.0)),
+        spawn_offscreen_distance=int(raw_data.get("spawn_offscreen_distance", raw_data.get("spawn_margin", 110))),
     )

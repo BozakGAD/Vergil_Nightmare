@@ -25,7 +25,7 @@ class AnimationSpec:
 PLAYER_ANIMATION_SPECS = MappingProxyType(
     {
         "idle": AnimationSpec("idle", 4, 4, "Idle stance."),
-        "taunt": AnimationSpec("taunt", 13, 26, "Taunt plays each source frame twice."),
+        "taunt": AnimationSpec("taunt", 21, 21, "Ending this animation grants boost to combo"),
         "run": AnimationSpec("run", 8, 8, "Horizontal movement left/right."),
         "jump_rise": AnimationSpec("jump_rise", 1, 1, "Jump ascent sprite."),
         "jump_hang": AnimationSpec("jump_hang", 1, 1, "Short hang-time sprite."),
@@ -34,18 +34,12 @@ PLAYER_ANIMATION_SPECS = MappingProxyType(
         "death": AnimationSpec("death", 2, 2, "Death pose remains on the final frame."),
         "yamato_air_lift": AnimationSpec("yamato_air_lift", 6, 6, "Air hit that lifts the enemy slightly."),
         "yamato_air_slam": AnimationSpec("yamato_air_slam", 6, 6, "Air hit that sends the enemy down."),
-        "yamato_ground_slash": AnimationSpec("yamato_ground_slash", 11, 11, "Single grounded Yamato attack."),
-        "yamato_ground_launcher_full": AnimationSpec(
-            "yamato_ground_launcher_full",
-            11,
-            11,
-            "Grounded S + attack launcher when attack is held.",
-        ),
-        "yamato_ground_launcher_rise": AnimationSpec(
-            "yamato_ground_launcher_rise",
-            11,
-            8,
-            "Grounded S + attack launcher branch that carries Vergil upward after frame 8.",
+        "yamato_ground_slash": AnimationSpec("yamato_ground_slash", 7, 7, "Single grounded Yamato attack."),
+        "yamato_ground_launcher": AnimationSpec(
+            "yamato_ground_launcher",
+            9,
+            9,
+            "Shared grounded S + attack launcher animation for full and rise branches.",
         ),
     }
 )

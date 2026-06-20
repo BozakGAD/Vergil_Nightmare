@@ -4,7 +4,15 @@
     "stop_distance": 70,
     "gravity": 1550,
     "air_gravity_modifier": 1.0,
-    "launch_hits_required": 0
+    "launch_hits_required": 0,
+    "enemy_spacing_distance": 120,
+    "attack_range": 76,
+    "attack_cooldown": 1.2,
+    "attack_duration": 0.45,
+    "attack_hit_start": 0.16,
+    "attack_hit_end": 0.28,
+    "attack_hitbox_width": 58,
+    "attack_hitbox_height": 58
   },
   "enemies": {
     "slow_enemy": {
@@ -12,24 +20,97 @@
       "height": 70,
       "speed": 110,
       "max_health": 100,
-      "color": [210, 90, 85],
-      "launch_hits_required": 0
+      "color": [
+        210,
+        90,
+        85
+      ],
+      "launch_hits_required": 0,
+      "attack_animation": "slow_enemy_attack",
+      "attack_hitbox_animation": "slow_enemy_attack_hitbox",
+      "attack_damage": 1,
+      "attack_hitbox_frame_count": 6
     },
     "fast_enemy": {
       "width": 38,
       "height": 62,
       "speed": 200,
       "max_health": 70,
-      "color": [235, 150, 75],
-      "launch_hits_required": 0
+      "color": [
+        235,
+        150,
+        75
+      ],
+      "launch_hits_required": 0,
+      "attack_animation": "fast_enemy_attack",
+      "attack_hitbox_animation": "fast_enemy_attack_hitbox",
+      "attack_damage": 1,
+      "attack_cooldown": 0.9,
+      "attack_range": 82,
+      "attack_hitbox_frame_count": 6
     },
     "heavy_enemy": {
       "width": 58,
       "height": 86,
       "speed": 100,
       "max_health": 150,
-      "color": [150, 100, 220],
-      "launch_hits_required": 4
+      "color": [
+        150,
+        100,
+        220
+      ],
+      "launch_hits_required": 4,
+      "attack_animation": "heavy_enemy_attack",
+      "attack_hitbox_animation": "heavy_enemy_attack_hitbox",
+      "attack_damage": 2,
+      "attack_cooldown": 1.6,
+      "attack_range": 92,
+      "attack_hitbox_width": 72,
+      "attack_hitbox_height": 72,
+      "attack_hitbox_frame_count": 8
+    }
+  },
+  "sprites": {
+    "root": "assets/sprites/enemies",
+    "frame_duration": 0.15,
+    "scale": 2,
+    "animations": {
+      "slow_enemy_attack": {
+        "folder": "slow_enemy/attack",
+        "frame_count": 6,
+        "left_frames": 6,
+        "right_frames": 6
+      },
+      "fast_enemy_attack": {
+        "folder": "fast_enemy/attack",
+        "frame_count": 6,
+        "left_frames": 6,
+        "right_frames": 6
+      },
+      "heavy_enemy_attack": {
+        "folder": "heavy_enemy/attack",
+        "frame_count": 8,
+        "left_frames": 8,
+        "right_frames": 8
+      },
+      "slow_enemy_attack_hitbox": {
+        "folder": "../effects/slow_enemy_attack_hitbox",
+        "frame_count": 6,
+        "left_frames": 6,
+        "right_frames": 6
+      },
+      "fast_enemy_attack_hitbox": {
+        "folder": "../effects/fast_enemy_attack_hitbox",
+        "frame_count": 6,
+        "left_frames": 6,
+        "right_frames": 6
+      },
+      "heavy_enemy_attack_hitbox": {
+        "folder": "../effects/heavy_enemy_attack_hitbox",
+        "frame_count": 8,
+        "left_frames": 8,
+        "right_frames": 8
+      }
     }
   }
 }

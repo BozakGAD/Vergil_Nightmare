@@ -10,6 +10,32 @@ from src.combat.attack import AttackProfile, load_attack_profiles
 
 
 @dataclass(frozen=True, slots=True)
+class ComboRankSettings:
+    """Combo rank threshold and scoring multiplier."""
+
+    rank: str
+    min_hits: int
+    score_multiplier: float
+
+
+@dataclass(frozen=True, slots=True)
+class StyleRankSettings:
+    """Final style rank threshold by accumulated score."""
+
+    rank: str
+    min_score: float
+
+
+@dataclass(frozen=True, slots=True)
+class ComboSettings:
+    """Session combo and style scoring settings."""
+
+    timeout: float
+    ranks: tuple[ComboRankSettings, ...]
+    style_score_ranks: tuple[StyleRankSettings, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class MovementSettings:
     """Player movement and gravity parameters."""
 
@@ -22,14 +48,45 @@ class MovementSettings:
     height: int
 
 
+@dataclass(frozen=True, slots=True, eq=False)
+class AnimationSettings:
+    """Configurable animation folder and timing metadata."""
+
+    folder: str
+    frame_duration: float
+    frame_count: int | None = None
+    left_frames: int | None = None
+    right_frames: int | None = None
+
+    def __eq__(self, other: object) -> bool:
+        """Support legacy comparisons that treated animation settings as folder strings."""
+        if isinstance(other, str):
+            return self.folder == other
+        if not isinstance(other, AnimationSettings):
+            return NotImplemented
+        return (
+            self.folder,
+            self.frame_duration,
+            self.frame_count,
+            self.left_frames,
+            self.right_frames,
+        ) == (
+            other.folder,
+            other.frame_duration,
+            other.frame_count,
+            other.left_frames,
+            other.right_frames,
+        )
+
+
 @dataclass(frozen=True, slots=True)
 class SpriteSettings:
-    """Optional player sprite loading settings."""
+    """Sprite loading settings grouped by entity responsibility."""
 
     root: str | None
-    animations: dict[str, str]
-    frame_duration: float
+    animations: dict[str, AnimationSettings]
     scale: int
+    default_frame_duration: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,6 +104,18 @@ class EnemyProfile:
     gravity: float
     air_gravity_modifier: float
     launch_hits_required: int
+    enemy_spacing_distance: float
+    attack_damage: int
+    attack_range: float
+    attack_cooldown: float
+    attack_duration: float
+    attack_hit_start: float
+    attack_hit_end: float
+    attack_hitbox_width: int
+    attack_hitbox_height: int
+    attack_animation: str
+    attack_hitbox_animation: str | None
+    attack_hitbox_frame_count: int | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,6 +126,8 @@ class GameplayConfig:
     sprites: SpriteSettings
     attacks: dict[str, AttackProfile]
     enemies: dict[str, EnemyProfile]
+    enemy_sprites: SpriteSettings
+    combo: ComboSettings
 
     @classmethod
     def from_files(
@@ -65,6 +136,7 @@ class GameplayConfig:
         player_path: str | Path = "data/player.json",
         attacks_path: str | Path = "data/attacks.json",
         enemies_path: str | Path = "data/enemies.json",
+        combo_path: str | Path = "data/combo.json",
     ) -> "GameplayConfig":
         """Load player movement, attacks and enemies from JSON files."""
         return cls(
@@ -72,6 +144,8 @@ class GameplayConfig:
             sprites=load_sprite_settings(player_path),
             attacks=load_attack_profiles(attacks_path),
             enemies=load_enemy_profiles(enemies_path),
+            enemy_sprites=load_sprite_settings(enemies_path),
+            combo=load_combo_settings(combo_path),
         )
 
 
@@ -92,15 +166,37 @@ def load_movement_settings(path: str | Path = "data/player.json") -> MovementSet
 
 
 def load_sprite_settings(path: str | Path = "data/player.json") -> SpriteSettings:
-    """Load optional sprite animation folder settings."""
+    """Load sprite animation folder settings from an entity JSON file."""
     raw_data = json.loads(Path(path).read_text(encoding="utf-8"))
     sprites = raw_data.get("sprites", {})
+    if not isinstance(sprites, dict):
+        return SpriteSettings(root=None, animations={}, scale=1, default_frame_duration=0.08)
+
+    default_frame_duration = float(sprites.get("frame_duration", 0.08))
     return SpriteSettings(
-        root=sprites.get("root") if isinstance(sprites, dict) else None,
-        animations=dict(sprites.get("animations", {})) if isinstance(sprites, dict) else {},
-        frame_duration=float(sprites.get("frame_duration", 0.08)) if isinstance(sprites, dict) else 0.08,
-        scale=int(sprites.get("scale", 1)) if isinstance(sprites, dict) else 1,
+        root=sprites.get("root"),
+        animations=_load_animation_settings(sprites.get("animations", {}), default_frame_duration),
+        scale=int(sprites.get("scale", 1)),
+        default_frame_duration=default_frame_duration,
     )
+
+
+def _load_animation_settings(raw_animations: object, default_frame_duration: float) -> dict[str, AnimationSettings]:
+    if not isinstance(raw_animations, dict):
+        return {}
+    animations: dict[str, AnimationSettings] = {}
+    for name, data in raw_animations.items():
+        if isinstance(data, str):
+            animations[str(name)] = AnimationSettings(folder=data, frame_duration=default_frame_duration)
+        elif isinstance(data, dict):
+            animations[str(name)] = AnimationSettings(
+                folder=str(data["folder"]),
+                frame_duration=float(data.get("frame_duration", default_frame_duration)),
+                frame_count=int(data["frame_count"]) if data.get("frame_count") is not None else None,
+                left_frames=int(data["left_frames"]) if data.get("left_frames") is not None else None,
+                right_frames=int(data["right_frames"]) if data.get("right_frames") is not None else None,
+            )
+    return animations
 
 
 def load_enemy_profiles(path: str | Path = "data/enemies.json") -> dict[str, EnemyProfile]:
@@ -115,8 +211,7 @@ def load_enemy_profiles(path: str | Path = "data/enemies.json") -> dict[str, Ene
     for enemy_id, enemy_data in enemies.items():
         if not isinstance(enemy_data, dict):
             continue
-        color_values = enemy_data.get("color", (210, 80, 90))
-        color = tuple(int(value) for value in color_values)
+        color = tuple(int(value) for value in enemy_data.get("color", (210, 80, 90)))
         if len(color) != 3:
             raise ValueError(f"Enemy '{enemy_id}' color must contain exactly 3 components")
         profiles[str(enemy_id)] = EnemyProfile(
@@ -131,5 +226,41 @@ def load_enemy_profiles(path: str | Path = "data/enemies.json") -> dict[str, Ene
             gravity=float(enemy_data.get("gravity", defaults.get("gravity", 1550))),
             air_gravity_modifier=float(enemy_data.get("air_gravity_modifier", defaults.get("air_gravity_modifier", 1.0))),
             launch_hits_required=int(enemy_data.get("launch_hits_required", defaults.get("launch_hits_required", 0))),
+            enemy_spacing_distance=float(defaults.get("enemy_spacing_distance", 96)),
+            attack_damage=int(enemy_data.get("attack_damage", defaults.get("attack_damage", 1))),
+            attack_range=float(enemy_data.get("attack_range", defaults.get("attack_range", 70))),
+            attack_cooldown=float(enemy_data.get("attack_cooldown", defaults.get("attack_cooldown", 1.2))),
+            attack_duration=float(enemy_data.get("attack_duration", defaults.get("attack_duration", 0.45))),
+            attack_hit_start=float(enemy_data.get("attack_hit_start", defaults.get("attack_hit_start", 0.12))),
+            attack_hit_end=float(enemy_data.get("attack_hit_end", defaults.get("attack_hit_end", 0.24))),
+            attack_hitbox_width=int(enemy_data.get("attack_hitbox_width", defaults.get("attack_hitbox_width", 56))),
+            attack_hitbox_height=int(enemy_data.get("attack_hitbox_height", defaults.get("attack_hitbox_height", 56))),
+            attack_animation=str(enemy_data.get("attack_animation", f"{enemy_id}_attack")),
+            attack_hitbox_animation=str(enemy_data["attack_hitbox_animation"]) if enemy_data.get("attack_hitbox_animation") else None,
+            attack_hitbox_frame_count=(
+                int(enemy_data.get("attack_hitbox_frame_count", defaults.get("attack_hitbox_frame_count")))
+                if enemy_data.get("attack_hitbox_frame_count", defaults.get("attack_hitbox_frame_count")) is not None
+                else None
+            ),
         )
     return profiles
+
+
+def load_combo_settings(path: str | Path = "data/combo.json") -> ComboSettings:
+    """Load combo thresholds and final style scoring settings."""
+    raw_data = json.loads(Path(path).read_text(encoding="utf-8"))
+    ranks = tuple(
+        ComboRankSettings(
+            rank=str(rank_data["rank"]),
+            min_hits=int(rank_data["min_hits"]),
+            score_multiplier=float(rank_data.get("score_multiplier", 1.0)),
+        )
+        for rank_data in raw_data.get("ranks", [])
+        if isinstance(rank_data, dict)
+    )
+    style_ranks = tuple(
+        StyleRankSettings(rank=str(rank_data["rank"]), min_score=float(rank_data["min_score"]))
+        for rank_data in raw_data.get("style_score_ranks", [])
+        if isinstance(rank_data, dict)
+    )
+    return ComboSettings(timeout=float(raw_data.get("timeout", 5.0)), ranks=ranks, style_score_ranks=style_ranks)

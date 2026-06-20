@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+import json
 from pathlib import Path
 
 import pygame
@@ -43,6 +44,7 @@ class MainMenuScene:
         self.title_placeholder_image = self._load_scaled_image(self.assets.title_placeholder_image, (560, 145))
         self.settings_panel = ControlSettingsPanel(screen_size=screen_size, controls=self.controls)
         self.menu_buttons = self._create_menu_buttons()
+        self.saved_style_rank = self._load_saved_style_rank()
 
     def _load_scaled_image(self, image_path: str | None, size: tuple[int, int]) -> pygame.Surface | None:
         """Load and scale an optional image asset if the configured file exists."""
@@ -91,11 +93,32 @@ class MainMenuScene:
         surface.fill(self.BACKGROUND_COLOR)
         self._draw_background(surface)
         self._draw_title_placeholder(surface)
+        self._draw_saved_style_rank(surface)
 
         for button in self.menu_buttons:
             button.draw(surface, self.button_font, mouse_position=mouse_position)
 
         self.settings_panel.draw(surface, mouse_position)
+
+    def _load_saved_style_rank(self) -> str | None:
+        path = Path("saves/style_rank.json")
+        if not path.exists():
+            return None
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return None
+        rank = data.get("rank")
+        return str(rank) if rank else None
+
+    def _draw_saved_style_rank(self, surface: pygame.Surface) -> None:
+        if self.saved_style_rank is None:
+            return
+        rect = pygame.Rect(self.screen_width - 190, 24, 160, 88)
+        pygame.draw.rect(surface, (0, 0, 0, 110), rect, border_radius=10)
+        pygame.draw.rect(surface, self.BORDER_COLOR, rect, width=2, border_radius=10)
+        label = self.small_font.render(f"Saved style: {self.saved_style_rank}", True, self.MUTED_TEXT_COLOR)
+        surface.blit(label, label.get_rect(center=rect.center))
 
     def _draw_background(self, surface: pygame.Surface) -> None:
         """Draw a configured menu background or leave a plain fallback color."""

@@ -13,19 +13,102 @@
   "sprites": {
     "root": "assets/sprites/player",
     "animations": {
-      "idle": "idle",
-      "taunt": "taunt",
-      "run": "run",
-      "jump_rise": "jump_rise",
-      "jump_hang": "jump_hang",
-      "fall": "fall",
-      "hurt": "hurt",
-      "death": "death",
-      "yamato_air_lift": "yamato_air_lift",
-      "yamato_air_slam": "yamato_air_slam",
-      "yamato_ground_slash": "yamato_ground_slash",
-      "yamato_ground_launcher_full": "yamato_ground_launcher_full",
-      "yamato_ground_launcher_rise": "yamato_ground_launcher_rise"
+      "idle": {
+        "folder": "idle",
+        "frame_count": 4,
+        "left_frames": 4,
+        "right_frames": 4
+      },
+      "taunt": {
+        "folder": "taunt",
+        "frame_count": 13,
+        "left_frames": 13,
+        "right_frames": 13
+      },
+      "run": {
+        "folder": "run",
+        "frame_count": 8,
+        "left_frames": 8,
+        "right_frames": 8
+      },
+      "jump_rise": {
+        "folder": "jump_rise",
+        "frame_count": 1,
+        "left_frames": 1,
+        "right_frames": 1
+      },
+      "jump_hang": {
+        "folder": "jump_hang",
+        "frame_count": 1,
+        "left_frames": 1,
+        "right_frames": 1
+      },
+      "fall": {
+        "folder": "fall",
+        "frame_count": 1,
+        "left_frames": 1,
+        "right_frames": 1
+      },
+      "hurt": {
+        "folder": "hurt",
+        "frame_count": 2,
+        "left_frames": 2,
+        "right_frames": 2
+      },
+      "death": {
+        "folder": "death",
+        "frame_count": 2,
+        "left_frames": 2,
+        "right_frames": 2
+      },
+      "yamato_air_lift": {
+        "folder": "yamato_air_lift",
+        "frame_count": 6,
+        "left_frames": 6,
+        "right_frames": 6
+      },
+      "yamato_air_slam": {
+        "folder": "yamato_air_slam",
+        "frame_count": 6,
+        "left_frames": 6,
+        "right_frames": 6
+      },
+      "yamato_ground_slash": {
+        "folder": "yamato_ground_slash",
+        "frame_count": 11,
+        "left_frames": 11,
+        "right_frames": 11
+      },
+      "yamato_ground_launcher": {
+        "folder": "yamato_ground_launcher",
+        "frame_count": 11,
+        "left_frames": 11,
+        "right_frames": 11
+      },
+      "yamato_ground_slash_hitbox": {
+        "folder": "../effects/yamato_ground_slash_hitbox",
+        "frame_count": 11,
+        "left_frames": 11,
+        "right_frames": 11
+      },
+      "yamato_air_lift_hitbox": {
+        "folder": "../effects/yamato_air_lift_hitbox",
+        "frame_count": 6,
+        "left_frames": 6,
+        "right_frames": 6
+      },
+      "yamato_air_slam_hitbox": {
+        "folder": "../effects/yamato_air_slam_hitbox",
+        "frame_count": 6,
+        "left_frames": 6,
+        "right_frames": 6
+      },
+      "yamato_ground_launcher_hitbox": {
+        "folder": "../effects/yamato_ground_launcher_hitbox",
+        "frame_count": 11,
+        "left_frames": 11,
+        "right_frames": 11
+      }
     },
     "frame_duration": 0.15,
     "scale": 2

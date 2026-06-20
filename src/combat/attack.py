@@ -11,6 +11,8 @@ from pathlib import Path
 class AttackProfile:
     """Data needed by the prototype combat loop for one attack."""
 
+    FRAMES_PER_SECOND = 60
+
     id: str
     animation: str
     duration: float
@@ -26,6 +28,9 @@ class AttackProfile:
     enemy_air_gravity_modifier: float
     enemy_knockback_x: float
     launch_player: bool
+    variant_check_frame: int | None
+    hitbox_animation: str | None
+    hitbox_frame_count: int | None
 
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> "AttackProfile":
@@ -46,7 +51,17 @@ class AttackProfile:
             enemy_air_gravity_modifier=float(data.get("enemy_air_gravity_modifier", 1.0)),
             enemy_knockback_x=float(data.get("enemy_knockback_x", 0.0)),
             launch_player=bool(data.get("launch_player", False)),
+            variant_check_frame=int(data["variant_check_frame"]) if "variant_check_frame" in data else None,
+            hitbox_animation=str(data["hitbox_animation"]) if data.get("hitbox_animation") else None,
+            hitbox_frame_count=int(data["hitbox_frame_count"]) if data.get("hitbox_frame_count") is not None else None,
         )
+
+    @property
+    def variant_check_time(self) -> float | None:
+        """Return the attack-button sampling time configured as an animation frame."""
+        if self.variant_check_frame is None:
+            return None
+        return self.variant_check_frame / self.FRAMES_PER_SECOND
 
 
 def load_attack_profiles(path: str | Path = "data/attacks.json") -> dict[str, AttackProfile]:

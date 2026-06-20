@@ -21,6 +21,8 @@ class AttackState:
     profile: AttackProfile
     elapsed: float = 0.0
     hit_enemy_ids: set[int] = field(default_factory=set)
+    variant_choice_checked: bool = False
+    animation_duration: float | None = None
 
     @property
     def is_active_hit_window(self) -> bool:
@@ -45,8 +47,8 @@ class Player(Entity):
             width=movement.width,
             height=movement.height,
             color=(120, 210, 255),
-            max_health=100,
-            health=100,
+            max_health=5,
+            health=5,
         )
         self.ground_y = ground_y
         self.movement = movement
@@ -79,7 +81,13 @@ class Player(Entity):
             attack_id = "yamato_air_lift"
 
         profile = self.attacks[attack_id]
-        self.attack_state = AttackState(profile)
+        animation_duration = profile.duration
+        if attack_id in {"yamato_ground_launcher_rise", "yamato_ground_launcher_full"}:
+            animation_duration = max(
+                self.attacks["yamato_ground_launcher_rise"].duration,
+                self.attacks["yamato_ground_launcher_full"].duration,
+            )
+        self.attack_state = AttackState(profile, animation_duration=animation_duration)
         self.current_animation = profile.animation
         get_player_animation_spec(profile.animation)
 
@@ -94,7 +102,7 @@ class Player(Entity):
             return pygame.Rect(self.rect.right, hitbox_top, profile.range_px, profile.hitbox_height)
         return pygame.Rect(self.rect.left - profile.range_px, hitbox_top, profile.range_px, profile.hitbox_height)
 
-    def update(self, dt: float, *, move_axis: int, arena_rect: pygame.Rect) -> None:
+    def update(self, dt: float, *, move_axis: int, arena_rect: pygame.Rect, attack_key_held: bool = False) -> None:
         """Advance movement, gravity and active attack animation."""
         if self.attack_state is None:
             self.velocity_x = move_axis * self.movement.horizontal_speed
@@ -120,19 +128,49 @@ class Player(Entity):
         else:
             self.is_on_ground = False
 
-        self._update_attack(dt)
+        self._update_attack(dt, attack_key_held=attack_key_held)
         self._update_animation_from_motion(move_axis)
 
-    def _update_attack(self, dt: float) -> None:
+    def _update_attack(self, dt: float, *, attack_key_held: bool) -> None:
         if self.attack_state is None:
             return
         self.attack_state.elapsed += dt
+        self._resolve_launcher_variant(attack_key_held)
         profile = self.attack_state.profile
         if profile.launch_player and self.attack_state.elapsed >= profile.duration * 0.72 and self.is_on_ground:
             self.velocity_y = profile.player_vertical_boost
             self.is_on_ground = False
         if self.attack_state.elapsed >= profile.duration:
             self.attack_state = None
+
+    def _resolve_launcher_variant(self, attack_key_held: bool) -> None:
+        if self.attack_state is None or self.attack_state.variant_choice_checked:
+            return
+        profile = self.attack_state.profile
+        if profile.id not in {"yamato_ground_launcher_rise", "yamato_ground_launcher_full"}:
+            return
+        check_time = profile.variant_check_time
+        if check_time is None or self.attack_state.elapsed < check_time:
+            return
+        chosen_id = "yamato_ground_launcher_rise" if attack_key_held else "yamato_ground_launcher_full"
+        if chosen_id != profile.id:
+            self.attack_state.profile = self.attacks[chosen_id]
+            if self.current_animation != self.attack_state.profile.animation:
+                self.current_animation = self.attack_state.profile.animation
+            get_player_animation_spec(self.attack_state.profile.animation)
+        self.attack_state.variant_choice_checked = True
+
+    def current_animation_frame_index(self, frame_count: int) -> int:
+        """Return a frame index synchronized to the active attack duration when attacking."""
+        if frame_count <= 0:
+            return 0
+        if self.attack_state is None:
+            return 0
+        animation_duration = self.attack_state.animation_duration or self.attack_state.profile.duration
+        frame_duration = animation_duration / frame_count
+        if frame_duration <= 0:
+            return 0
+        return min(frame_count - 1, int(self.attack_state.elapsed / frame_duration))
 
     def _update_animation_from_motion(self, move_axis: int) -> None:
         if self.attack_state is not None:
