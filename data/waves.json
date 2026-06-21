@@ -15,5 +15,5 @@
     "slow_enemy"
   ],
   "inter_wave_delay": 1.5,
-  "spawn_offscreen_distance": 140
+  "spawn_offscreen_distance": 160
 }

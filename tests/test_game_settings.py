@@ -20,7 +20,6 @@ def test_game_settings_loads_window_branding_and_assets(tmp_path):
                 },
                 "assets": {
                     "main_menu_background": "assets/backgrounds/main_menu_background/main_menu_background.png",
-                    "title_placeholder_image": "assets/ui/title_placeholder.png",
                     "game_background": "assets/backgrounds/game_background/game_background.png",
                 },
             }
@@ -34,5 +33,4 @@ def test_game_settings_loads_window_branding_and_assets(tmp_path):
     assert settings.window.icon_path == "assets/icons/app_icon.png"
     assert settings.window.taskbar_app_id == "test.game"
     assert settings.assets.main_menu_background == "assets/backgrounds/main_menu_background/main_menu_background.png"
-    assert settings.assets.title_placeholder_image == "assets/ui/title_placeholder.png"
     assert settings.assets.game_background == "assets/backgrounds/game_background/game_background.png"

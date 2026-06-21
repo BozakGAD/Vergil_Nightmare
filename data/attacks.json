@@ -96,6 +96,44 @@
       "enemy_knockback_x": 500,
       "hitbox_animation": "yamato_air_slam_hitbox",
       "hitbox_frame_count": 6
+    },
+    {
+      "id": "taunt",
+      "animation": "taunt",
+      "duration": 4,
+      "hit_start": 5,
+      "hit_end": 0,
+      "damage": 0,
+      "range_px": 0,
+      "hitbox_height": 0,
+      "player_vertical_boost": 0,
+      "player_gravity_modifier": 1.0,
+      "enemy_lift_velocity": 0,
+      "enemy_slam_velocity": 0,
+      "enemy_air_gravity_modifier": 1.0,
+      "launch_player": false,
+      "enemy_knockback_x": 0,
+      "hitbox_animation": null,
+      "hitbox_frame_count": null
+    },
+    {
+      "id": "ability",
+      "animation": "ability",
+      "duration": 0.75,
+      "hit_start": 0.12,
+      "hit_end": 0.42,
+      "damage": 500,
+      "range_px": 300,
+      "hitbox_height": 160,
+      "player_vertical_boost": 0,
+      "player_gravity_modifier": 1.0,
+      "enemy_lift_velocity": 0,
+      "enemy_slam_velocity": 0,
+      "enemy_air_gravity_modifier": 1.0,
+      "launch_player": false,
+      "enemy_knockback_x": 420,
+      "hitbox_animation": "ability_hitbox",
+      "hitbox_frame_count": 4
     }
   ]
 }

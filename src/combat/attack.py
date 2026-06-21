@@ -64,11 +64,16 @@ class AttackProfile:
         return self.variant_check_frame / self.FRAMES_PER_SECOND
 
 
-def load_attack_profiles(path: str | Path = "data/attacks.json") -> dict[str, AttackProfile]:
-    """Load all configured attacks by id."""
+def load_attack_profiles(path: str | Path = "data/attacks.json", *, include_utility: bool = False) -> dict[str, AttackProfile]:
+    """Load configured attacks by id, optionally including utility actions."""
     raw_data = json.loads(Path(path).read_text(encoding="utf-8"))
     attacks = raw_data.get("attacks", [])
     if not isinstance(attacks, list):
         raise ValueError("attacks.json must contain an 'attacks' list")
-    profiles = [AttackProfile.from_dict(attack) for attack in attacks if isinstance(attack, dict)]
+    utility_ids = {"taunt", "ability"}
+    profiles = [
+        AttackProfile.from_dict(attack)
+        for attack in attacks
+        if isinstance(attack, dict) and (include_utility or str(attack.get("id")) not in utility_ids)
+    ]
     return {profile.id: profile for profile in profiles}

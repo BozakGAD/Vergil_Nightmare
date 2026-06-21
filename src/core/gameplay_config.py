@@ -33,6 +33,18 @@ class ComboSettings:
     timeout: float
     ranks: tuple[ComboRankSettings, ...]
     style_score_ranks: tuple[StyleRankSettings, ...]
+    taunt_score_multiplier: float = 1.5
+
+
+@dataclass(frozen=True, slots=True)
+class PlayerCombatSettings:
+    """Configurable player combat state timings and ability charge."""
+
+    hurt_duration: float
+    hurt_invulnerability_duration: float
+    death_duration: float
+    ability_charge_rate: float
+    ability_damage_loss_percent: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -113,9 +125,15 @@ class EnemyProfile:
     attack_hit_end: float
     attack_hitbox_width: int
     attack_hitbox_height: int
+    idle_animation: str
+    approach_animation: str
+    hurt_animation: str
+    death_animation: str
+    hurt_duration: float
     attack_animation: str
     attack_hitbox_animation: str | None
     attack_hitbox_frame_count: int | None
+    death_linger_duration: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,6 +146,7 @@ class GameplayConfig:
     enemies: dict[str, EnemyProfile]
     enemy_sprites: SpriteSettings
     combo: ComboSettings
+    player_combat: PlayerCombatSettings
 
     @classmethod
     def from_files(
@@ -142,10 +161,11 @@ class GameplayConfig:
         return cls(
             movement=load_movement_settings(player_path),
             sprites=load_sprite_settings(player_path),
-            attacks=load_attack_profiles(attacks_path),
+            attacks=load_attack_profiles(attacks_path, include_utility=True),
             enemies=load_enemy_profiles(enemies_path),
             enemy_sprites=load_sprite_settings(enemies_path),
             combo=load_combo_settings(combo_path),
+            player_combat=load_player_combat_settings(player_path),
         )
 
 
@@ -162,6 +182,20 @@ def load_movement_settings(path: str | Path = "data/player.json") -> MovementSet
         air_gravity=float(movement["air_gravity"]),
         width=int(size["width"]),
         height=int(size["height"]),
+    )
+
+
+def load_player_combat_settings(path: str | Path = "data/player.json") -> PlayerCombatSettings:
+    """Load player hurt/death timings and ability charge settings."""
+    raw_data = json.loads(Path(path).read_text(encoding="utf-8"))
+    combat = raw_data.get("combat", {})
+    ability = raw_data.get("ability", {})
+    return PlayerCombatSettings(
+        hurt_duration=float(combat.get("hurt_duration", 0.45)),
+        hurt_invulnerability_duration=float(combat.get("hurt_invulnerability_duration", 0.75)),
+        death_duration=float(combat.get("death_duration", 1.0)),
+        ability_charge_rate=float(ability.get("charge_rate_percent_per_second", 8.0)),
+        ability_damage_loss_percent=float(ability.get("damage_loss_percent", 25.0)),
     )
 
 
@@ -235,6 +269,11 @@ def load_enemy_profiles(path: str | Path = "data/enemies.json") -> dict[str, Ene
             attack_hit_end=float(enemy_data.get("attack_hit_end", defaults.get("attack_hit_end", 0.24))),
             attack_hitbox_width=int(enemy_data.get("attack_hitbox_width", defaults.get("attack_hitbox_width", 56))),
             attack_hitbox_height=int(enemy_data.get("attack_hitbox_height", defaults.get("attack_hitbox_height", 56))),
+            idle_animation=str(enemy_data.get("idle_animation", f"{enemy_id}_idle")),
+            approach_animation=str(enemy_data.get("approach_animation", f"{enemy_id}_approach")),
+            hurt_animation=str(enemy_data.get("hurt_animation", f"{enemy_id}_hurt")),
+            death_animation=str(enemy_data.get("death_animation", f"{enemy_id}_death")),
+            hurt_duration=float(enemy_data.get("hurt_duration", defaults.get("hurt_duration", 0.18))),
             attack_animation=str(enemy_data.get("attack_animation", f"{enemy_id}_attack")),
             attack_hitbox_animation=str(enemy_data["attack_hitbox_animation"]) if enemy_data.get("attack_hitbox_animation") else None,
             attack_hitbox_frame_count=(
@@ -242,6 +281,7 @@ def load_enemy_profiles(path: str | Path = "data/enemies.json") -> dict[str, Ene
                 if enemy_data.get("attack_hitbox_frame_count", defaults.get("attack_hitbox_frame_count")) is not None
                 else None
             ),
+            death_linger_duration=float(enemy_data.get("death_linger_duration", defaults.get("death_linger_duration", 1.2))),
         )
     return profiles
 
@@ -263,4 +303,9 @@ def load_combo_settings(path: str | Path = "data/combo.json") -> ComboSettings:
         for rank_data in raw_data.get("style_score_ranks", [])
         if isinstance(rank_data, dict)
     )
-    return ComboSettings(timeout=float(raw_data.get("timeout", 5.0)), ranks=ranks, style_score_ranks=style_ranks)
+    return ComboSettings(
+        timeout=float(raw_data.get("timeout", 5.0)),
+        ranks=ranks,
+        style_score_ranks=style_ranks,
+        taunt_score_multiplier=float(raw_data.get("taunt_score_multiplier", 1.5)),
+    )

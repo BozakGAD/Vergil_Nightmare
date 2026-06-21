@@ -19,7 +19,7 @@ def _player(config: GameplayConfig | None = None) -> Player:
     return Player(x=100, movement=config.movement, attacks=config.attacks)
 
 
-def test_player_animation_placeholders_match_declared_sprite_counts():
+def test_player_animation_contracts_match_declared_sprite_counts():
     assert PLAYER_ANIMATION_SPECS["idle"].source_frame_count == 4
     assert PLAYER_ANIMATION_SPECS["taunt"].source_frame_count == 13
     assert PLAYER_ANIMATION_SPECS["taunt"].drawn_frame_count == 26
@@ -62,6 +62,7 @@ def test_enemy_chases_grounded_player_but_backs_away_from_airborne_player():
     enemy.update(0.1, player, arena)
     grounded_velocity = enemy.velocity_x
 
+    player.x = 250
     player.is_on_ground = False
     enemy.update(0.1, player, arena)
     airborne_velocity = enemy.velocity_x
@@ -208,3 +209,56 @@ def test_player_uses_five_health_points():
 
     assert player.max_health == 5
     assert player.health == 5
+
+
+def test_dead_enemy_keeps_knockback_without_chase_velocity():
+    config = _config()
+    enemy = HeavyEnemy(x=120, profile=config.enemies["heavy_enemy"])
+    enemy.velocity_x = enemy.profile.speed
+    enemy.health = 10
+
+    enemy.receive_attack(config.attacks["yamato_air_slam"], attacker_center_x=0)
+
+    assert enemy.is_dying is True
+    assert enemy.velocity_x == 0
+    assert enemy.horizontal_knockback > 0
+    assert enemy.current_animation == enemy.profile.death_animation
+
+
+def test_player_death_animation_stops_on_last_frame():
+    config = _config()
+    player = _player(config)
+    player.receive_damage(player.health)
+    player.update(config.player_combat.death_duration * 2, move_axis=0, arena_rect=pygame.Rect(0, 0, 800, 600))
+
+    assert player.current_animation == "death"
+    assert player.current_animation_frame_index(3) == 2
+
+
+def test_enemy_death_animation_stops_on_last_frame():
+    config = _config()
+    enemy = HeavyEnemy(x=120, profile=config.enemies["heavy_enemy"])
+    enemy.health = 1
+    enemy.receive_attack(config.attacks["yamato_ground_slash"], attacker_center_x=0)
+    enemy.update(enemy.profile.death_linger_duration * 2, _player(config), pygame.Rect(0, 0, 800, 600))
+
+    assert enemy.current_animation == enemy.profile.death_animation
+    assert enemy.current_animation_frame_index(3) == 2
+
+
+def test_ability_dashes_forward_and_leaves_damaging_path_hitbox():
+    config = _config()
+    player = _player(config)
+    player.ability_charge_percent = 100
+    player.facing = 1
+    arena = pygame.Rect(0, 0, 800, 600)
+
+    assert player.try_activate_ability() is True
+    player.update(0.13, move_axis=0, arena_rect=arena)
+
+    ability = config.attacks["ability"]
+    assert player.x == 100 + ability.range_px
+    assert player.attack_hitbox is not None
+    assert player.attack_hitbox.left <= 100
+    assert player.attack_hitbox.right >= player.rect.right
+    assert ability.damage > 0

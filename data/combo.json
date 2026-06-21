@@ -1,19 +1,62 @@
 {
   "timeout": 6,
   "ranks": [
-    {"rank": "E", "min_hits": 1, "score_multiplier": 1.0},
-    {"rank": "D", "min_hits": 5, "score_multiplier": 1.25},
-    {"rank": "C", "min_hits": 10, "score_multiplier": 1.5},
-    {"rank": "B", "min_hits": 15, "score_multiplier": 2.0},
-    {"rank": "A", "min_hits": 20, "score_multiplier": 2.5},
-    {"rank": "S", "min_hits": 25, "score_multiplier": 3.0}
+    {
+      "rank": "E",
+      "min_hits": 1,
+      "score_multiplier": 1.0
+    },
+    {
+      "rank": "D",
+      "min_hits": 6,
+      "score_multiplier": 1.25
+    },
+    {
+      "rank": "C",
+      "min_hits": 10,
+      "score_multiplier": 1.5
+    },
+    {
+      "rank": "B",
+      "min_hits": 15,
+      "score_multiplier": 2.0
+    },
+    {
+      "rank": "A",
+      "min_hits": 20,
+      "score_multiplier": 2.5
+    },
+    {
+      "rank": "S",
+      "min_hits": 25,
+      "score_multiplier": 3.0
+    }
   ],
   "style_score_ranks": [
-    {"rank": "E", "min_score": 80},
-    {"rank": "D", "min_score": 90},
-    {"rank": "C", "min_score": 100},
-    {"rank": "B", "min_score": 110},
-    {"rank": "A", "min_score": 125},
-    {"rank": "S", "min_score": 150}
-  ]
+    {
+      "rank": "E",
+      "min_score": 30
+    },
+    {
+      "rank": "D",
+      "min_score": 60
+    },
+    {
+      "rank": "C",
+      "min_score": 100
+    },
+    {
+      "rank": "B",
+      "min_score": 175
+    },
+    {
+      "rank": "A",
+      "min_score": 250
+    },
+    {
+      "rank": "S",
+      "min_score": 300
+    }
+  ],
+  "taunt_score_multiplier": 1.5
 }

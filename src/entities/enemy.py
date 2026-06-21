@@ -33,14 +33,25 @@ class Enemy(Entity):
         self.attack_cooldown_remaining = 0.0
         self.is_attacking = False
         self.has_hit_player_this_attack = False
-        self.current_animation = "idle"
+        self.current_animation = profile.idle_animation
+        self.animation_elapsed = 0.0
+        self.hurt_timer = 0.0
+        self._movement_animation = profile.idle_animation
         self.facing = 1
+        self.death_timer = 0.0
+        self.is_dying = False
 
     def current_animation_frame_index(self, frame_count: int) -> int:
         """Return a frame index synchronized to the active attack duration."""
         if frame_count <= 0:
             return 0
-        if not self.is_attacking or self.profile.attack_duration <= 0:
+        if self.is_dying:
+            return min(frame_count - 1, int(self.death_timer / max(0.001, self.profile.death_linger_duration / frame_count)))
+        if self.hurt_timer > 0:
+            return min(frame_count - 1, int(self.animation_elapsed / max(0.001, self.profile.hurt_duration / frame_count)))
+        if not self.is_attacking:
+            return int(self.animation_elapsed / 0.15) % frame_count
+        if self.profile.attack_duration <= 0:
             return 0
         frame_duration = self.profile.attack_duration / frame_count
         return min(frame_count - 1, int(self.attack_elapsed / frame_duration))
@@ -63,9 +74,15 @@ class Enemy(Entity):
         neighbors: list["Enemy"] | None = None,
     ) -> None:
         """Move according to the player's grounded/aerial state."""
-        if not self.is_alive:
+        if self.is_dying:
+            self.death_timer += dt
+            self.is_attacking = False
+            self._update_physics(dt, arena_rect)
             return
 
+        self.animation_elapsed += dt
+        if self.hurt_timer > 0:
+            self.hurt_timer = max(0.0, self.hurt_timer - dt)
         if self.attack_cooldown_remaining > 0:
             self.attack_cooldown_remaining = max(0.0, self.attack_cooldown_remaining - dt)
         if self.is_attacking:
@@ -76,9 +93,19 @@ class Enemy(Entity):
         if self.is_on_ground and not self.is_attacking:
             self.velocity_x = self._desired_ground_velocity(player)
             self.velocity_x = self._limit_velocity_for_spacing(self.velocity_x, neighbors or [])
+            self._update_movement_animation()
         else:
             self.velocity_x = 0.0
+            if self.hurt_timer <= 0 and not self.is_attacking:
+                self._set_animation(self.profile.idle_animation)
 
+        self._update_physics(dt, arena_rect)
+
+    @property
+    def should_remove(self) -> bool:
+        return self.is_dying and self.death_timer >= self.profile.death_linger_duration
+
+    def _update_physics(self, dt: float, arena_rect: pygame.Rect) -> None:
         movement_x = self.velocity_x + self.horizontal_knockback
         self.x += movement_x * dt
         self.x = max(arena_rect.left, min(self.x, arena_rect.right - self.width))
@@ -111,7 +138,7 @@ class Enemy(Entity):
         return pygame.Rect(self.rect.right, top, width, height)
 
     def _can_start_attack(self, player: Player) -> bool:
-        if self.attack_cooldown_remaining > 0:
+        if self.attack_cooldown_remaining > 0 or self.hurt_timer > 0:
             return False
         distance = player.centerx - self.centerx
         if abs(distance) <= self.profile.attack_range:
@@ -124,7 +151,7 @@ class Enemy(Entity):
         self.attack_elapsed = 0.0
         self.has_hit_player_this_attack = False
         self.velocity_x = 0.0
-        self.current_animation = self.profile.attack_animation
+        self._set_animation(self.profile.attack_animation)
 
     def _update_attack(self, dt: float) -> None:
         self.attack_elapsed += dt
@@ -132,7 +159,7 @@ class Enemy(Entity):
             self.is_attacking = False
             self.attack_elapsed = 0.0
             self.attack_cooldown_remaining = self.profile.attack_cooldown
-            self.current_animation = "idle"
+            self._set_animation(self.profile.idle_animation)
 
     def _limit_velocity_for_spacing(self, velocity_x: float, neighbors: list["Enemy"]) -> float:
         """Prevent movement that would push this enemy into another enemy's spacing bubble."""
@@ -151,6 +178,19 @@ class Enemy(Entity):
                 return 0.0
         return velocity_x
 
+    def _set_animation(self, animation: str) -> None:
+        if self.current_animation != animation:
+            self.current_animation = animation
+            self.animation_elapsed = 0.0
+
+    def _update_movement_animation(self) -> None:
+        if self.hurt_timer > 0:
+            self._set_animation(self.profile.hurt_animation)
+        elif self.velocity_x == 0:
+            self._set_animation(self.profile.idle_animation)
+        else:
+            self._set_animation(self._movement_animation)
+
     def _desired_ground_velocity(self, player: Player) -> float:
         distance = player.centerx - self.centerx
         abs_distance = abs(distance)
@@ -159,10 +199,14 @@ class Enemy(Entity):
             preferred = self.profile.preferred_air_distance
             tolerance = self.profile.stop_distance
             if abs(abs_distance - preferred) <= tolerance:
+                self._movement_animation = self.profile.idle_animation
                 return 0.0
-            velocity = direction * self.profile.speed if abs_distance > preferred else -direction * self.profile.speed
+            is_approaching = abs_distance > preferred
+            self._movement_animation = self.profile.approach_animation
+            velocity = direction * self.profile.speed if is_approaching else -direction * self.profile.speed
             self.facing = 1 if velocity > 0 else -1
             return velocity
+        self._movement_animation = self.profile.idle_animation if abs_distance <= self.profile.stop_distance else self.profile.approach_animation
         velocity = 0.0 if abs_distance <= self.profile.stop_distance else direction * self.profile.speed
         if velocity != 0:
             self.facing = 1 if velocity > 0 else -1
@@ -171,11 +215,19 @@ class Enemy(Entity):
     def receive_attack(self, profile: AttackProfile, attacker_center_x: float) -> bool:
         """Apply one attack and return whether the enemy was launched or slammed."""
         self.take_damage(profile.damage)
-        if not self.is_alive:
-            return False
 
         knockback_direction = 1 if self.centerx >= attacker_center_x else -1
         self.horizontal_knockback = knockback_direction * profile.enemy_knockback_x
+        if not self.is_alive:
+            self.is_dying = True
+            self.death_timer = 0.0
+            self.velocity_x = 0.0
+            self._set_animation(self.profile.death_animation)
+            self.is_attacking = False
+        else:
+            self.hurt_timer = self.profile.hurt_duration
+            self._set_animation(self.profile.hurt_animation)
+
         self.launch_hit_counter += 1
         moved_vertically = False
         if profile.enemy_lift_velocity and (not self.is_on_ground or self.can_be_launched):

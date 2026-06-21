@@ -57,9 +57,9 @@
       },
       "death": {
         "folder": "death",
-        "frame_count": 2,
-        "left_frames": 2,
-        "right_frames": 2
+        "frame_count": 3,
+        "left_frames": 3,
+        "right_frames": 3
       },
       "yamato_air_lift": {
         "folder": "yamato_air_lift",
@@ -108,9 +108,30 @@
         "frame_count": 11,
         "left_frames": 11,
         "right_frames": 11
+      },
+      "ability": {
+        "folder": "ability",
+        "frame_count": 11,
+        "left_frames": 11,
+        "right_frames": 11
+      },
+      "ability_hitbox": {
+        "folder": "../effects/ability_hitbox",
+        "frame_count": 4,
+        "left_frames": 4,
+        "right_frames": 4
       }
     },
     "frame_duration": 0.15,
     "scale": 2
+  },
+  "combat": {
+    "hurt_duration": 0.45,
+    "hurt_invulnerability_duration": 1,
+    "death_duration": 1.5
+  },
+  "ability": {
+    "charge_rate_percent_per_second": 3.0,
+    "damage_loss_percent": 25.0
   }
 }

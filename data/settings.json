@@ -9,7 +9,6 @@
   },
   "assets": {
     "main_menu_background": "assets/backgrounds/main_menu_background/main_menu_background.png",
-    "title_placeholder_image": "assets/ui/title_placeholder.png",
     "game_background": "assets/backgrounds/game_background/game_background.png"
   },
   "gameplay": {

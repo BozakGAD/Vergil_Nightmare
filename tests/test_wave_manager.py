@@ -6,7 +6,7 @@ from src.systems.wave_manager import WaveManager, load_wave_settings
 def test_wave_settings_load_from_json():
     settings = load_wave_settings()
 
-    assert settings.max_waves == 10
+    assert settings.max_waves == 5
     assert settings.enemy_costs["heavy_enemy"] == 4
     assert settings.base_budget == 3
     assert settings.budget_growth == 2

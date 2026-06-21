@@ -44,6 +44,10 @@ class WaveManager:
         """Create a wave manager from a JSON settings file."""
         return cls(load_wave_settings(path))
 
+    def reset(self) -> None:
+        """Return wave progression to the start of a run."""
+        self.current_wave = 0
+
     def next_wave(self, arena_width: int) -> list[EnemySpawn]:
         """Advance to the next wave and return spawn instructions."""
         if self.current_wave >= self.settings.max_waves:

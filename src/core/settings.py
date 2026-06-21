@@ -24,7 +24,6 @@ class AssetSettings:
     """Paths to optional visual assets."""
 
     main_menu_background: str | None
-    title_placeholder_image: str | None
     game_background: str | None
 
 
@@ -52,7 +51,6 @@ class GameSettings:
             ),
             assets=AssetSettings(
                 main_menu_background=assets.get("main_menu_background"),
-                title_placeholder_image=assets.get("title_placeholder_image"),
                 game_background=assets.get("game_background"),
             ),
         )

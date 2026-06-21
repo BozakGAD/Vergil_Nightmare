@@ -41,10 +41,9 @@ class MainMenuScene:
             self.assets.main_menu_background,
             (self.screen_width, self.screen_height),
         )
-        self.title_placeholder_image = self._load_scaled_image(self.assets.title_placeholder_image, (560, 145))
         self.settings_panel = ControlSettingsPanel(screen_size=screen_size, controls=self.controls)
         self.menu_buttons = self._create_menu_buttons()
-        self.saved_style_rank = self._load_saved_style_rank()
+        self.saved_style_rank, self.saved_style_score = self._load_saved_style_rank()
 
     def _load_scaled_image(self, image_path: str | None, size: tuple[int, int]) -> pygame.Surface | None:
         """Load and scale an optional image asset if the configured file exists."""
@@ -92,7 +91,6 @@ class MainMenuScene:
         mouse_position = pygame.mouse.get_pos()
         surface.fill(self.BACKGROUND_COLOR)
         self._draw_background(surface)
-        self._draw_title_placeholder(surface)
         self._draw_saved_style_rank(surface)
 
         for button in self.menu_buttons:
@@ -100,16 +98,17 @@ class MainMenuScene:
 
         self.settings_panel.draw(surface, mouse_position)
 
-    def _load_saved_style_rank(self) -> str | None:
+    def _load_saved_style_rank(self) -> tuple[str | None, float | None]:
         path = Path("saves/style_rank.json")
         if not path.exists():
-            return None
+            return None, None
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
-            return None
+            return None, None
         rank = data.get("rank")
-        return str(rank) if rank else None
+        score = data.get("score")
+        return (str(rank) if rank else None, float(score) if isinstance(score, int | float) else None)
 
     def _draw_saved_style_rank(self, surface: pygame.Surface) -> None:
         if self.saved_style_rank is None:
@@ -118,25 +117,12 @@ class MainMenuScene:
         pygame.draw.rect(surface, (0, 0, 0, 110), rect, border_radius=10)
         pygame.draw.rect(surface, self.BORDER_COLOR, rect, width=2, border_radius=10)
         label = self.small_font.render(f"Saved style: {self.saved_style_rank}", True, self.MUTED_TEXT_COLOR)
-        surface.blit(label, label.get_rect(center=rect.center))
+        surface.blit(label, label.get_rect(center=(rect.centerx, rect.centery - 14)))
+        if self.saved_style_score is not None:
+            score = self.small_font.render(f"Score: {self.saved_style_score:.0f}", True, self.MUTED_TEXT_COLOR)
+            surface.blit(score, score.get_rect(center=(rect.centerx, rect.centery + 18)))
 
     def _draw_background(self, surface: pygame.Surface) -> None:
         """Draw a configured menu background or leave a plain fallback color."""
         if self.background_image is not None:
             surface.blit(self.background_image, (0, 0))
-
-    def _draw_title_placeholder(self, surface: pygame.Surface) -> None:
-        """Reserve a visible area for the future pixel-art title image."""
-        placeholder_rect = pygame.Rect(0, 0, 560, 145)
-        placeholder_rect.center = (self.screen_width // 2, 155)
-        if self.title_placeholder_image is not None:
-            surface.blit(self.title_placeholder_image, placeholder_rect)
-            return
-
-        placeholder = pygame.Surface(placeholder_rect.size, pygame.SRCALPHA)
-        pygame.draw.rect(placeholder, (0, 0, 0, 70), placeholder.get_rect(), border_radius=12)
-        pygame.draw.rect(placeholder, self.BORDER_COLOR, placeholder.get_rect(), width=2, border_radius=12)
-        label = self.small_font.render("Заглушка под пиксельное изображение названия", True, self.MUTED_TEXT_COLOR)
-        placeholder.blit(label, label.get_rect(center=placeholder.get_rect().center))
-        surface.blit(placeholder, placeholder_rect)
-

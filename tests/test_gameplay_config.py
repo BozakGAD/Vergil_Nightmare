@@ -63,7 +63,7 @@ def test_movement_settings_keep_wasd_vertical_movement_out_of_player_motion():
 def test_combo_settings_and_enemy_attack_profiles_load_from_json():
     config = GameplayConfig.from_files()
 
-    assert config.combo.timeout == 5.0
+    assert config.combo.timeout == 6.0
     assert config.combo.ranks[0].rank == "E"
     assert config.combo.ranks[-1].rank == "S"
     assert config.enemies["slow_enemy"].attack_damage == 1
@@ -76,3 +76,8 @@ def test_combo_settings_and_enemy_attack_profiles_load_from_json():
     assert config.sprites.animations["yamato_ground_launcher_hitbox"].folder == "../effects/yamato_ground_launcher_hitbox"
     assert config.sprites.animations["yamato_ground_launcher_hitbox"].frame_count == 11
     assert config.enemy_sprites.animations["heavy_enemy_attack"].folder == "heavy_enemy/attack"
+    assert config.enemy_sprites.animations["heavy_enemy_idle"].folder == "heavy_enemy/idle"
+    assert config.enemy_sprites.animations["heavy_enemy_approach"].folder == "heavy_enemy/approach"
+    assert "heavy_enemy_retreat" not in config.enemy_sprites.animations
+    assert config.enemy_sprites.animations["heavy_enemy_hurt"].folder == "heavy_enemy/hurt"
+    assert config.enemy_sprites.animations["heavy_enemy_death"].folder == "heavy_enemy/death"

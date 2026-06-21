@@ -50,13 +50,16 @@ class GameScene:
             x=self.screen_width * 0.35,
             movement=self.gameplay_config.movement,
             attacks=self.gameplay_config.attacks,
+            combat=self.gameplay_config.player_combat,
             ground_y=self.ground_y,
         )
         self.enemies: list[Enemy] = []
         self.wave_delay_timer = 0.0
         self.combo_system = ComboSystem(self.gameplay_config.combo)
+        self.is_taunt_timeout_paused = False
         self.is_victory = False
         self.final_style_rank: str | None = None
+        self.final_style_score: float = 0.0
         self._spawn_next_wave()
         font_path = pygame.font.match_font("dejavusans")
         self.button_font = pygame.font.Font(font_path, 28)
@@ -65,7 +68,9 @@ class GameScene:
         self.is_paused = False
         self.settings_panel = ControlSettingsPanel(screen_size=screen_size, controls=self.controls)
         self.pause_buttons = self._create_pause_buttons()
-        self.background_image = self._load_scaled_image(self.assets.game_background, (self.screen_width, self.screen_height))
+        self.background_image = self._load_scaled_image(self.assets.game_background, (self.screen_width, self.ground_y))
+        self.hp_images = self._load_numbered_ui_images("assets/ui/hp", (190, 58))
+        self.ability_images = self._load_numbered_ui_images("assets/ui/ability", (220, 34))
         self.player_frames = load_animation_frames(self.gameplay_config.sprites)
         self.enemy_frames = load_animation_frames(self.gameplay_config.enemy_sprites)
         self.victory_buttons = self._create_victory_buttons()
@@ -90,6 +95,14 @@ class GameScene:
                 return
             if key_name == self.controls.get("jump"):
                 self.player.start_jump()
+                return
+            if key_name == self.controls.get("taunt"):
+                if self.player.start_taunt():
+                    self.is_taunt_timeout_paused = self.combo_system.has_active_combo
+                    self.combo_system.pause_timeout()
+                return
+            if key_name == self.controls.get("ability"):
+                self.player.try_activate_ability()
                 return
             if key_name == self.controls.get("attack"):
                 self.player.start_yamato_attack(
@@ -116,17 +129,32 @@ class GameScene:
         if self._is_control_pressed(keys, "move_right"):
             move_axis += 1
 
+        was_taunting = self.player.attack_state is not None and self.player.attack_state.profile.id == "taunt"
         self.player.update(
             dt,
             move_axis=move_axis,
             arena_rect=self.arena_rect,
             attack_key_held=self._is_attack_key_down(),
         )
+        if was_taunting and self.player.attack_state is None and not self.player.is_hurt and not self.player.is_dead:
+            self.combo_system.resume_timeout()
+            if self.is_taunt_timeout_paused:
+                self.combo_system.activate_taunt_multiplier()
+            self.is_taunt_timeout_paused = False
         for enemy in self.enemies:
             enemy.update(dt, self.player, self.enemy_arena_rect, neighbors=self.enemies)
         self._resolve_player_attack_hits()
         self._resolve_enemy_attack_hits()
         self.combo_system.update(dt)
+        had_enemies_before_cleanup = bool(self.enemies)
+        self.enemies = [enemy for enemy in self.enemies if not enemy.should_remove]
+        if had_enemies_before_cleanup and not self.enemies and self.wave_delay_timer <= 0:
+            self.wave_delay_timer = self.wave_manager.settings.inter_wave_delay
+        if self.player.is_dead and self.player.death_timer >= self.gameplay_config.player_combat.death_duration:
+            self._finish_victory()
+            return
+        if self.enemies and all(enemy.is_dying for enemy in self.enemies):
+            return
         if self.enemies and all(not enemy.is_alive for enemy in self.enemies):
             self.enemies = []
             self.wave_delay_timer = self.wave_manager.settings.inter_wave_delay
@@ -142,28 +170,29 @@ class GameScene:
         surface.fill(self.BACKGROUND_COLOR)
         if self.background_image is not None:
             surface.blit(self.background_image, (0, 0))
-        pygame.draw.rect(surface, (20, 24, 36, 190), self.arena_rect, border_radius=10)
+        else:
+            pygame.draw.rect(surface, (20, 24, 36, 190), self.arena_rect)
         pygame.draw.line(
             surface,
             self.FLOOR_COLOR,
-            (self.arena_rect.left, self.ground_y),
-            (self.arena_rect.right, self.ground_y),
+            (0, self.ground_y),
+            (self.screen_width, self.ground_y),
             4,
         )
 
         self._draw_player(surface)
         for enemy in self.enemies:
-            if enemy.is_alive:
+            if enemy.is_alive or enemy.is_dying:
                 self._draw_enemy(surface, enemy)
-                self._draw_launch_ready_dot(surface, enemy)
-                self._draw_health_bar(surface, enemy.rect, enemy.health, enemy.max_health)
+                if enemy.is_alive:
+                    self._draw_launch_ready_dot(surface, enemy)
+                    self._draw_health_bar(surface, enemy.rect, enemy.health, enemy.max_health)
 
         self._draw_attack_hitbox(surface)
         self._draw_enemy_attack_hitboxes(surface)
 
         self._draw_player_hud(surface)
         self._draw_combo_hud(surface)
-        self._draw_debug_text(surface)
         if self.is_paused:
             self._draw_pause_overlay(surface)
         if self.is_victory:
@@ -188,7 +217,7 @@ class GameScene:
         top = self.screen_height // 2 + 20
         left = self.screen_width // 2 - button_width // 2
         return [
-            Button(pygame.Rect(left, top, button_width, button_height), "Продолжить", self._resume_after_victory),
+            Button(pygame.Rect(left, top, button_width, button_height), "Начать заново", self._restart_after_victory),
             Button(pygame.Rect(left, top + button_height + gap, button_width, button_height), "В главное меню", self.return_to_menu),
         ]
 
@@ -212,37 +241,35 @@ class GameScene:
             for index, (label, action) in enumerate(actions)
         ]
 
-    def _rebuild_pause_buttons(self) -> None:
-        button_width = 340
-        button_height = 58
-        gap = 20
-        start_y = self.screen_height // 2 - button_height - gap
-        left = self.screen_width // 2 - button_width // 2
-        actions: tuple[tuple[str, Callable[[], None]], ...] = (
-            ("Продолжить", self._resume),
-            ("Настройки", self.settings_panel.open),
-            ("В главное меню", self.return_to_menu),
-        )
-        self.pause_buttons = [
-            Button(
-                rect=pygame.Rect(left, start_y + index * (button_height + gap), button_width, button_height),
-                text=label,
-                on_click=action,
-            )
-            for index, (label, action) in enumerate(actions)
-        ]
-
     def _toggle_pause(self) -> None:
         self.is_paused = not self.is_paused
         if self.is_paused:
-            self._rebuild_pause_buttons()
+            self.pause_buttons = self._create_pause_buttons()
 
     def _resume(self) -> None:
         self.is_paused = False
         self.settings_panel.close()
 
-    def _resume_after_victory(self) -> None:
+    def _restart_after_victory(self) -> None:
+        self.player = Player(
+            x=self.screen_width * 0.35,
+            movement=self.gameplay_config.movement,
+            attacks=self.gameplay_config.attacks,
+            combat=self.gameplay_config.player_combat,
+            ground_y=self.ground_y,
+        )
+        self.enemies = []
+        self.wave_manager.reset()
+        self.wave_delay_timer = 0.0
+        self.combo_system = ComboSystem(self.gameplay_config.combo)
+        self.is_taunt_timeout_paused = False
         self.is_victory = False
+        self.final_style_rank = None
+        self.final_style_score = 0.0
+        self.is_paused = False
+        self.settings_panel.close()
+        self._key_names_down.clear()
+        self._spawn_next_wave()
 
     def _is_back_modifier_down(self) -> bool:
         return "s" in self._key_names_down
@@ -265,7 +292,7 @@ class GameScene:
         hit_any_enemy = False
         for enemy in self.enemies:
             enemy_id = id(enemy)
-            if enemy_id in attack_state.hit_enemy_ids or not enemy.is_alive or not hitbox.colliderect(enemy.rect):
+            if enemy_id in attack_state.hit_enemy_ids or not enemy.is_alive or enemy.is_dying or not hitbox.colliderect(enemy.rect):
                 continue
             enemy.receive_attack(attack_state.profile, self.player.centerx)
             attack_state.hit_enemy_ids.add(enemy_id)
@@ -279,16 +306,18 @@ class GameScene:
     def _resolve_enemy_attack_hits(self) -> None:
         for enemy in self.enemies:
             hitbox = enemy.attack_hitbox
-            if hitbox is None or enemy.has_hit_player_this_attack or not enemy.is_alive:
+            if hitbox is None or enemy.has_hit_player_this_attack or not enemy.is_alive or enemy.is_dying or not self.player.can_be_attacked:
                 continue
             if hitbox.colliderect(self.player.rect):
-                self.player.take_damage(enemy.profile.attack_damage)
+                self.player.receive_damage(enemy.profile.attack_damage)
                 enemy.has_hit_player_this_attack = True
                 self.combo_system.register_player_damage()
+                self.is_taunt_timeout_paused = False
 
     def _finish_victory(self) -> None:
         self.combo_system.reset_combo()
         self.final_style_rank = self.combo_system.final_style_rank()
+        self.final_style_score = self.combo_system.total_score
         self._save_style_rank()
         self.is_victory = True
 
@@ -297,7 +326,12 @@ class GameScene:
             return
         path = Path("saves/style_rank.json")
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(f'{{"rank": "{self.final_style_rank}"}}\n', encoding="utf-8")
+        import json
+
+        path.write_text(
+            json.dumps({"rank": self.final_style_rank, "score": round(self.final_style_score, 2)}, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
 
     def _draw_player(self, surface: pygame.Surface) -> None:
         frames = self.player_frames.get(self.player.current_animation)
@@ -312,7 +346,7 @@ class GameScene:
         self._draw_entity(surface, self.player.rect, self.player.color, outline=(210, 240, 255))
 
     def _player_frame_index(self, frames: list[pygame.Surface]) -> int:
-        if self.player.attack_state is not None:
+        if self.player.attack_state is not None or self.player.is_dead:
             return self.player.current_animation_frame_index(len(frames))
         return int(pygame.time.get_ticks() / (self.gameplay_config.sprites.default_frame_duration * 1000)) % len(frames)
 
@@ -342,7 +376,7 @@ class GameScene:
             if frames:
                 frame_count = enemy.profile.attack_hitbox_frame_count or len(frames)
                 frame = pygame.transform.smoothscale(frames[enemy.current_animation_frame_index(min(frame_count, len(frames)))], hitbox.size)
-                if enemy.facing < 0:
+                if self._should_flip_enemy_frame(enemy):
                     frame = pygame.transform.flip(frame, True, False)
                 surface.blit(frame, frame.get_rect(center=hitbox.center))
             else:
@@ -352,12 +386,20 @@ class GameScene:
         health_rect = pygame.Rect(24, 24, 190, 58)
         pygame.draw.rect(surface, (0, 0, 0, 120), health_rect, border_radius=10)
         pygame.draw.rect(surface, self.TEXT_COLOR, health_rect, width=2, border_radius=10)
-        label = self.small_font.render(f"HP image placeholder: {self.player.health}/5", True, self.TEXT_COLOR)
+        hp_image = self.hp_images.get(self.player.health) or self.hp_images.get(max(self.hp_images) if self.hp_images else -1)
+        if hp_image is not None:
+            surface.blit(hp_image, health_rect)
+        label = self.small_font.render(f"HP: {self.player.health}/5", True, self.TEXT_COLOR)
         surface.blit(label, label.get_rect(center=health_rect.center))
         ability_rect = pygame.Rect(24, 92, 220, 34)
-        pygame.draw.rect(surface, (35, 45, 80, 160), ability_rect, border_radius=8)
-        pygame.draw.rect(surface, (110, 160, 255), ability_rect, width=2, border_radius=8)
-        ability = self.small_font.render("Special ability image placeholder", True, self.MUTED_TEXT_COLOR)
+        ability_image = self._ability_hud_image()
+        if ability_image is not None:
+            surface.blit(ability_image, ability_rect)
+        else:
+            pygame.draw.rect(surface, (35, 45, 80, 160), ability_rect, border_radius=8)
+            pygame.draw.rect(surface, (110, 160, 255), ability_rect, width=2, border_radius=8)
+        percent = round(self.player.ability_charge_percent)
+        ability = self.small_font.render(f"Ability: {percent}%", True, self.TEXT_COLOR)
         surface.blit(ability, ability.get_rect(center=ability_rect.center))
 
     def _draw_combo_hud(self, surface: pygame.Surface) -> None:
@@ -383,7 +425,9 @@ class GameScene:
         pygame.draw.rect(surface, (25, 28, 45), rank_rect, border_radius=12)
         pygame.draw.rect(surface, self.TEXT_COLOR, rank_rect, width=2, border_radius=12)
         rank_text = self.button_font.render(f"Style: {self.final_style_rank or '—'}", True, self.TEXT_COLOR)
-        surface.blit(rank_text, rank_text.get_rect(center=rank_rect.center))
+        surface.blit(rank_text, rank_text.get_rect(center=(rank_rect.centerx, rank_rect.centery - 16)))
+        score_text = self.small_font.render(f"Score: {self.final_style_score:.0f}", True, self.MUTED_TEXT_COLOR)
+        surface.blit(score_text, score_text.get_rect(center=(rank_rect.centerx, rank_rect.centery + 26)))
         for button in self.victory_buttons:
             button.draw(surface, self.button_font, mouse_position=mouse_position)
 
@@ -401,13 +445,22 @@ class GameScene:
     def _draw_enemy(self, surface: pygame.Surface, enemy: Enemy) -> None:
         frames = self.enemy_frames.get(enemy.current_animation)
         if frames:
-            frame = frames[enemy.current_animation_frame_index(len(frames))]
+            frame = pygame.transform.smoothscale(
+                frames[enemy.current_animation_frame_index(len(frames))],
+                enemy.rect.size,
+            )
             rect = frame.get_rect(midbottom=enemy.rect.midbottom)
-            if enemy.facing < 0:
+            if self._should_flip_enemy_frame(enemy):
                 frame = pygame.transform.flip(frame, True, False)
             surface.blit(frame, rect)
             return
         self._draw_entity(surface, enemy.rect, enemy.color)
+
+    def _should_flip_enemy_frame(self, enemy: Enemy) -> bool:
+        """Return whether an enemy sprite needs horizontal flipping for its facing."""
+        if enemy.profile.enemy_id == "fast_enemy":
+            return enemy.facing > 0
+        return enemy.facing < 0
 
     def _draw_launch_ready_dot(self, surface: pygame.Surface, enemy: Enemy) -> None:
         if enemy.needs_launch_charge and enemy.can_be_launched:
@@ -429,18 +482,34 @@ class GameScene:
         for button in self.pause_buttons:
             button.draw(surface, self.button_font, mouse_position=mouse_position)
 
-    def _draw_debug_text(self, surface: pygame.Surface) -> None:
-        attack = self.player.attack_state.profile.id if self.player.attack_state else "none"
-        lines = [
-            "GameScene prototype: A/D — движение, Alt — прыжок, J — атака, S+J — launcher/downslash, Esc — пауза",
-            f"wave={self.wave_manager.current_wave}/{self.wave_manager.settings.max_waves} next_wave_delay={self.wave_delay_timer:.1f}s animation={self.player.current_animation} attack={attack}",
-            "Волны, атаки, движение, гравитация, фон и спрайты настраиваются через JSON.",
-            f"loaded sprite sets: player={len(self.player_frames)} enemy={len(self.enemy_frames)}",
-        ]
-        for index, line in enumerate(lines):
-            color = self.TEXT_COLOR if index == 0 else self.MUTED_TEXT_COLOR
-            label = self.small_font.render(line, True, color)
-            surface.blit(label, (82, 24 + index * 23))
+    def _ability_hud_image(self) -> pygame.Surface | None:
+        charge = self.player.ability_charge_percent
+        if charge >= 100:
+            index = 4
+        elif charge < 25:
+            index = 1
+        elif charge < 50:
+            index = 2
+        elif charge < 75:
+            index = 3
+        else:
+            index = 3
+        return self.ability_images.get(index)
+
+    def _load_numbered_ui_images(self, folder: str, size: tuple[int, int]) -> dict[int, pygame.Surface]:
+        root = Path(folder)
+        images: dict[int, pygame.Surface] = {}
+        if not root.exists():
+            return images
+        for path in root.iterdir():
+            if path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp"}:
+                continue
+            try:
+                index = int(path.stem)
+            except ValueError:
+                continue
+            images[index] = self._load_scaled_image(str(path), size)
+        return {key: value for key, value in images.items() if value is not None}
 
     def _load_scaled_image(self, image_path: str | None, size: tuple[int, int]) -> pygame.Surface | None:
         if not image_path:

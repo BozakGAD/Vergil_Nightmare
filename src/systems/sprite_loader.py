@@ -25,11 +25,6 @@ def load_animation_frames(settings: SpriteSettings) -> dict[str, list[pygame.Sur
     return animations
 
 
-def load_player_animation_frames(settings: SpriteSettings) -> dict[str, list[pygame.Surface]]:
-    """Backward-compatible player animation loader."""
-    return load_animation_frames(settings)
-
-
 def _load_frames(root: Path, animation: AnimationSettings, scale: int) -> list[pygame.Surface]:
     folder = root / animation.folder
     if not folder.exists():
