@@ -60,7 +60,7 @@ class MovementSettings:
     height: int
 
 
-@dataclass(frozen=True, slots=True, eq=False)
+@dataclass(frozen=True, slots=True)
 class AnimationSettings:
     """Configurable animation folder and timing metadata."""
 
@@ -69,26 +69,6 @@ class AnimationSettings:
     frame_count: int | None = None
     left_frames: int | None = None
     right_frames: int | None = None
-
-    def __eq__(self, other: object) -> bool:
-        """Support legacy comparisons that treated animation settings as folder strings."""
-        if isinstance(other, str):
-            return self.folder == other
-        if not isinstance(other, AnimationSettings):
-            return NotImplemented
-        return (
-            self.folder,
-            self.frame_duration,
-            self.frame_count,
-            self.left_frames,
-            self.right_frames,
-        ) == (
-            other.folder,
-            other.frame_duration,
-            other.frame_count,
-            other.left_frames,
-            other.right_frames,
-        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -191,11 +171,11 @@ def load_player_combat_settings(path: str | Path = "data/player.json") -> Player
     combat = raw_data.get("combat", {})
     ability = raw_data.get("ability", {})
     return PlayerCombatSettings(
-        hurt_duration=float(combat.get("hurt_duration", 0.45)),
-        hurt_invulnerability_duration=float(combat.get("hurt_invulnerability_duration", 0.75)),
-        death_duration=float(combat.get("death_duration", 1.0)),
-        ability_charge_rate=float(ability.get("charge_rate_percent_per_second", 8.0)),
-        ability_damage_loss_percent=float(ability.get("damage_loss_percent", 25.0)),
+        hurt_duration=float(combat.get("hurt_duration")),
+        hurt_invulnerability_duration=float(combat.get("hurt_invulnerability_duration")),
+        death_duration=float(combat.get("death_duration")),
+        ability_charge_rate=float(ability.get("charge_rate_percent_per_second")),
+        ability_damage_loss_percent=float(ability.get("damage_loss_percent")),
     )
 
 
@@ -206,11 +186,11 @@ def load_sprite_settings(path: str | Path = "data/player.json") -> SpriteSetting
     if not isinstance(sprites, dict):
         return SpriteSettings(root=None, animations={}, scale=1, default_frame_duration=0.08)
 
-    default_frame_duration = float(sprites.get("frame_duration", 0.08))
+    default_frame_duration = float(sprites.get("frame_duration"))
     return SpriteSettings(
         root=sprites.get("root"),
         animations=_load_animation_settings(sprites.get("animations", {}), default_frame_duration),
-        scale=int(sprites.get("scale", 1)),
+        scale=int(sprites.get("scale")),
         default_frame_duration=default_frame_duration,
     )
 
@@ -220,16 +200,13 @@ def _load_animation_settings(raw_animations: object, default_frame_duration: flo
         return {}
     animations: dict[str, AnimationSettings] = {}
     for name, data in raw_animations.items():
-        if isinstance(data, str):
-            animations[str(name)] = AnimationSettings(folder=data, frame_duration=default_frame_duration)
-        elif isinstance(data, dict):
-            animations[str(name)] = AnimationSettings(
-                folder=str(data["folder"]),
-                frame_duration=float(data.get("frame_duration", default_frame_duration)),
-                frame_count=int(data["frame_count"]) if data.get("frame_count") is not None else None,
-                left_frames=int(data["left_frames"]) if data.get("left_frames") is not None else None,
-                right_frames=int(data["right_frames"]) if data.get("right_frames") is not None else None,
-            )
+        animations[str(name)] = AnimationSettings(
+            folder=str(data["folder"]),
+            frame_duration=float(data.get("frame_duration", default_frame_duration)),
+            frame_count=int(data["frame_count"]) if data.get("frame_count") is not None else None,
+            left_frames=int(data["left_frames"]) if data.get("left_frames") is not None else None,
+            right_frames=int(data["right_frames"]) if data.get("right_frames") is not None else None,
+        )
     return animations
 
 
@@ -246,8 +223,6 @@ def load_enemy_profiles(path: str | Path = "data/enemies.json") -> dict[str, Ene
         if not isinstance(enemy_data, dict):
             continue
         color = tuple(int(value) for value in enemy_data.get("color", (210, 80, 90)))
-        if len(color) != 3:
-            raise ValueError(f"Enemy '{enemy_id}' color must contain exactly 3 components")
         profiles[str(enemy_id)] = EnemyProfile(
             enemy_id=str(enemy_id),
             width=int(enemy_data["width"]),

@@ -49,7 +49,7 @@ class ComboSystem:
         self.is_timeout_paused = False
 
     def pause_timeout(self) -> None:
-        """Freeze active combo timeout countdown, e.g. while a taunt animation plays."""
+        """Freeze active combo timeout countdown, for a taunt animation."""
         if self.has_active_combo:
             self.is_timeout_paused = True
 

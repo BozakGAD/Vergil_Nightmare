@@ -7,12 +7,9 @@ unit tests and in the JSON save/load layer.
 
 from __future__ import annotations
 
-from types import MappingProxyType
-
 CONTROL_STORAGE_PATH = "saves/controls.json"
 
-DEFAULT_CONTROL_BINDINGS = MappingProxyType(
-    {
+DEFAULT_CONTROL_BINDINGS = {
         "move_up": "w",
         "move_left": "a",
         "move_down": "s",
@@ -25,10 +22,9 @@ DEFAULT_CONTROL_BINDINGS = MappingProxyType(
         "taunt": "i",
         "pause": "escape",
     }
-)
 
-CONTROL_LABELS = MappingProxyType(
-    {
+
+CONTROL_LABELS = {
         "move_up": "Модификатор атаки вверх",
         "move_left": "Движение влево",
         "move_down": "Модификатор атаки назад",
@@ -41,7 +37,6 @@ CONTROL_LABELS = MappingProxyType(
         "taunt": "Провокация",
         "pause": "Пауза",
     }
-)
 
 EDITABLE_CONTROLS = tuple(key for key in DEFAULT_CONTROL_BINDINGS if key != "pause")
 

@@ -67,9 +67,6 @@ class WaveManager:
             while remaining >= cost:
                 enemies.append(enemy_id)
                 remaining -= cost
-        if not enemies:
-            cheapest = min(self.settings.enemy_costs, key=self.settings.enemy_costs.__getitem__)
-            enemies.append(cheapest)
         return enemies
 
     def _place_spawns(self, enemy_ids: list[str], arena_width: int) -> list[EnemySpawn]:
